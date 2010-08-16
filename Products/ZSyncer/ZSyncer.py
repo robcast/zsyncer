@@ -13,8 +13,10 @@ Changelog:       see changes.txt
 Future Plans:    see TODO.txt
 
 """
+# $Id: ZSyncer.py,v 1.104 2009/10/23 16:32:11 slinkp Exp $
 
 # Stdlib imports
+import logging
 import os
 import sys
 import tempfile
@@ -28,7 +30,6 @@ from cStringIO import StringIO
 # Zope imports
 import OFS.SimpleItem
 import Acquisition
-import zLOG
 import AccessControl.Role
 import OFS.PropertyManager
 from AccessControl import getSecurityManager
@@ -40,7 +41,13 @@ from Globals import DTMLFile, MessageDialog, Persistent, INSTANCE_HOME
 from Globals import InitializeClass
 from OFS.Traversable import NotFound
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
-from webdav.WriteLockInterface import WriteLockInterface
+
+try:
+    # Zope >= 2.12
+    from webdav.interfaces import IWriteLock as WriteLockInterface
+except ImportError:
+    # Zope <= 2.11
+    from webdav.WriteLockInterface import WriteLockInterface
 
 
 # Imports for rpc using ZPublisher.Client.
@@ -71,6 +78,10 @@ from Config import OK
 from Config import EXTRA
 from Config import MISSING
 from Config import OOD
+
+# BBB: Using logging in Zope 2.7 requires the name to begin with 'event'.
+# We can change that to just 'ZSyncer' if/when we no longer support 2.7.
+logger = logging.getLogger('event.ZSyncer')
 
 ZSYNC_PERMISSION = "ZSyncer: Use ZSyncer"
 MGT_SCR_PERMISSION = 'View management screens'
@@ -104,8 +115,8 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         {'label': 'Sync', 'action': 'manage_sync',
          'help':('ZSyncer', 'ZSyncer.stx') },
         {'label': 'Undo', 'action': 'manage_UndoForm',
-	 'help':('OFSP', 'Undo.stx') },
-	{'label': 'Ownership', 'action': 'manage_owner',
+         'help':('OFSP', 'Undo.stx') },
+        {'label': 'Ownership', 'action': 'manage_owner',
          'help':('OFSP', 'Ownership.stx') },
         {'label': 'Security', 'action': 'manage_access',
          'help':('OFSP', 'Security.stx') },
@@ -121,6 +132,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
          'select_variable': 'syncable'},
         {'id':'use_relative_paths', 'type':'boolean', 'mode':'w'},
         {'id':'relative_path_base', 'type':'string', 'mode':'w'},
+        {'id':'strip_talkback_comments', 'type':'boolean', 'mode':'w'},
         {'id':'add_syncable', 'type':'lines', 'mode':'w'},
         {'id':'connection_type', 'type':'string', 'mode':'w'},
         {'id':'filterObjects', 'type':'boolean', 'mode': 'w'},
@@ -137,6 +149,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
     non_syncable = ()
     use_relative_paths = 0
     relative_path_base = ''
+    strip_talkback_comments = 0
     connection_type = 'ConnectionMgr' #'ZPublisher.Client'
 
     security.declareProtected(ZSYNC_PERMISSION,
@@ -179,9 +192,10 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         self.log = 0
         self.approval = 0
         self.syncable = Config.syncable[:]
-        self.logfile = os.path.join(('log', 'ZSyncer.log'))
+        self.logfile = os.path.join('log', 'ZSyncer.log')
         self.connection_type = 'ConnectionMgr' # 'ZPublisher.Client'
         self.use_relative_paths = 1
+        self.strip_talkback_comments = 0
         self.filterObjects = 0
         self.filterOutObjects = 0
         self.add_syncable=[]
@@ -220,18 +234,18 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
 
     security.declareProtected(ZSYNC_PERMISSION, 'manage_syncDelete')
     def manage_syncDelete(self, object_paths, msgs=None, REQUEST=None):
-	"""
+        """
         Interface to deleting both locally and remotely.
         object_paths may be a string or a sequence of strings.
         If msgs list is provided, it's modified in-place;
         it's also returned.
-	"""
+        """
         if msgs is None:
             msgs = []
         if type(object_paths) is types.StringType:
             object_paths = [object_paths,]
         self.manage_deleteRemote(object_paths, msgs, REQUEST=None)
-	for path in object_paths:
+        for path in object_paths:
             status = self.manage_replaceObject(path, None)
             msgs.append(StatusMsg('Deleting %s locally' % str(path), status))
         self._do_messages(msgs, REQUEST)
@@ -342,16 +356,16 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             object_paths = [object_paths]
         if msgs is None:
             msgs = []
-	# Just grab it from the first successfully connectable dest server.
-	serverconn = None
-	for srv in self.dest_servers:
-	    try:
-		serverconn = self._getServerConn(srv)
+        # Just grab it from the first successfully connectable dest server.
+        serverconn = None
+        for srv in self.dest_servers:
+            try:
+                serverconn = self._getServerConn(srv)
                 break
-	    except:
+            except:
                 err = 'Error in manage_pullFromRemote connecting to %s' % srv
                 self._logException(err)
-		continue
+                continue
         if serverconn is None:
             raise ZSyncerConfigError, "Unable to connect to any server"
         self._msg_header(REQUEST=REQUEST)
@@ -377,7 +391,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 msg = StatusMsg('%s downloaded' % obj_path, 200)
                 msgs.append(msg)
                 self._do_one_msg(msg, REQUEST)
-	self._msg_footer(REQUEST)
+        self._msg_footer(REQUEST)
         return msgs
 
     security.declareProtected(ZSYNC_PERMISSION, 'manage_diffObject')
@@ -502,16 +516,13 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         else:
             # We already know length is non-zero, so there must be
             # some subfolders on the path. They must correspond to
-            # subfolders of root and not be acquired from above.
+            # subfolders of root and not be acquired from above
+            # (or from siblings). So, we walk the path by hand,
+            # instead of using (un)restrictedTraverse.
+            obj_parent = root
             try:
-                # Use aq_base to prevent acquiring things above root.
-                obj_parent = aq_base(root).restrictedTraverse(obj_path[:-1])
-                # That tells us if it's there, but we've lost
-                # the application root from its aq_chain which apparently
-                # has security implications (i.e. the checkPermission()
-                # tests below fail).
-                # So, just get it again without the aq_base() call.
-                obj_parent = root.restrictedTraverse(obj_path[:-1])
+                for segment in obj_path[:-1]:
+                    obj_parent = obj_parent[segment]
             except KeyError:
                 return 404
         # Let's check the user is allowed to do this.
@@ -553,8 +564,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 return 404
         # Add the new object, if any.
         if data is not None:
-            zLOG.LOG('ZSyncer', -100,
-                     ' trying to import %s **' % obj_path_printable)
+            logger.debug('trying to import %s **', obj_path_printable)
             threshold = Config.upload_threshold_kbytes * 1024
             # Write the data either to a temporary file, or hold it in RAM.
             if len(data) < threshold:
@@ -571,9 +581,14 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 # We'll re-raise it.
                 msg = '_p_Jar.importFile(_file) failed '
                 msg += '... receiving %s' % obj_path_printable
-                zLOG.LOG('ZSyncer', 200, msg)
+                logger.error(msg)
                 raise
             _file.close()
+            if new_obj == None:
+                msg = ('importing %s failed, problem with parents?' %
+                       obj_path_printable)
+                logger.error(msg)
+                raise AttributeError, msg
             object_id = new_obj.getId()
             try:
                 obj_parent._setObject(object_id, new_obj)
@@ -581,7 +596,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 # we'll re-raise it.
                 msg = 'obj_parent._setObject failed '
                 msg += '...receiving %s' % obj_path_printable
-                zLOG.LOG('ZSyncer', 200, msg)
+                logger.error(msg)
                 raise
 
             # Fix OrderedFolder position.
@@ -599,7 +614,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                     # We'll re-raise it.
                     msg = 'obj_parent.%s failed ' % methodname
                     msg += '...receiving %s' % obj_path_printable
-                    zLOG.LOG('ZSyncer', 200, msg)
+                    logger.error(msg)
                     raise
             # SF bug 988027:
             # Clear DAV locks, if any.
@@ -613,14 +628,17 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 locked_paths = [p[0] for p in
                                 lockmanager.findLockedObjects(newpath)]
                 if locked_paths:
-                    zLOG.LOG('ZSyncer', -200,
-                             'clearing DAV locks from %s\n' % locked_paths)
+                    logger.debug('clearing DAV locks from %s\n', locked_paths)
                     lockmanager.unlockObjects(paths=locked_paths)
             elif WriteLockInterface in aq_base(new_obj).__implements__:
                 new_obj.wl_clearLocks()
+        if self.strip_talkback_comments:
+            logger.debug('manage_replaceObject deleting coments under%s\n',
+                         obj_path_printable)
+            utils.kill_talkback_comments(obj_parent)
         # Success!
-        zLOG.LOG('ZSyncer', -100,
-                 'manage_replaceObject succeeded at %s\n' % obj_path_printable)
+        logger.debug('manage_replaceObject succeeded at %s\n',
+                     obj_path_printable)
         return 200
 
     security.declareProtected(MGT_SCR_PERMISSION, 'status_colour')
@@ -639,8 +657,13 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
     def status_icon(self, status):
         """Get icon of each status from the config.
         """
-        path =  Config.icons.get(status, '')
-        return path
+        path =  Config.icons.get(status, None)
+        if not path:
+            return ''
+        rootpath = self.getPhysicalRoot().absolute_url_path()
+        path = rootpath + '/' + path
+        path = path.replace('//', '/')
+        return path  #self.absolute_url_path() + '/' + path
 
     security.declareProtected(MGT_SCR_PERMISSION, 'manage_listObjects')
     def manage_listObjects(self, path, do_base=1):
@@ -706,12 +729,15 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         d.update(self.getPathInfo(d['path']))
         # This should always be a string right?
         d['meta_type'] = obj.meta_type
-        # CMF fix, where apparently obj.icon may be callable.
-        d['icon'] = obj.icon
-        if not isinstance(d['icon'], types.StringType):
-            d['icon'] = obj.icon()
-        if not d['icon'].startswith('/'):
-            d['icon'] = '/%s' % d['icon']
+        icon = obj.icon
+        if not isinstance(icon, types.StringType):
+            # CMF fix, where apparently obj.icon may be callable.
+            icon = icon()
+        if not icon.startswith('/'):
+            # Avoid stupid relative paths, don't want to download
+            # the icons again in every folder.
+            icon = '%s/%s' % (obj.getPhysicalRoot().absolute_url_path(), icon)
+        d['icon'] = icon.replace('//', '/')
         d['is_folder'] = getattr(obj, 'isPrincipiaFolderish', 0)
         # Try to get DublinCore mod time, if available.
         base_obj = aq_base(obj)
@@ -750,7 +776,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         Returns a dictionary with the following keys/values:
 
           'absolute_url_path':
-             absolute_url_path of the object (requires Zope 2.7 or higher).
+             absolute_url_path of the object.
              If the object is not found, assume it's an 'extra' object;
              then full == original path.
 
@@ -778,13 +804,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             obj = None
         if obj is not None:
             # Get the full path according to the object itself.
-            try:
-                full = obj.absolute_url_path()
-            except AttributeError:
-                # XXX workaround for Zope < 2.7.0...
-                # not guaranteed to be correct when virtual hosting.
-                # Someday SOON this should go away.
-                full = '/'+obj.absolute_url(relative=1)
+            full = obj.absolute_url_path()
         request = self.REQUEST
         if request.get('mode') == 'recursive':
             if request.get('folder', '') != '':
@@ -1029,8 +1049,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                     continue
                 #OK, really recurse, but don't filter.
                 try:
-                    zLOG.LOG('zsyncer', -100, "recursing",
-                             "FROM %s\n TO %s" % (path, sub_path))
+                    logger.debug("recursing FROM %s\n TO %s", path, sub_path)
                     # XXX Optimization: This is very inefficient use
                     # of network!  We have to fire off a request to
                     # the remote server for each subfolder. Ouch!
@@ -1044,7 +1063,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                                                  include_base=None)
                     results = results[1]
                 except Unauthorized:
-                    zLOG.LOG('zsyncer', -100, "got Unauthorized at %s" % path)
+                    logger.debug("got Unauthorized at %s", path)
                     results = []
                 compared.extend(results)
         output = (base_item, compared)
@@ -1123,7 +1142,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
     def _do_one_msg(self, msg, REQUEST=None):
         """Log and/or display a single Msg.
         """
-	if self.log or self.approval:
+        if self.log or self.approval:
             self._log(msg)
         if REQUEST is None:
             return 0
@@ -1145,7 +1164,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 msg += '/'.join(self.getPhysicalPath())
                 msg += '. You should probably make it relative to your'
                 msg += ' instance home.'
-                zLOG.LOG('ZSyncer', zLOG.PROBLEM, msg)
+                logger.error(msg)
             path = os.path.join(INSTANCE_HOME, self.logfile)
             self._v_logfile = open(path, 'a')
         self._v_logfile.write('%s\t%s\n' % (m_time, str(msgs)))
@@ -1173,8 +1192,8 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             server_url = 'http:%s' % server_url
         proto, netloc, url, params, query, fragment = urlparse.urlparse(
             server_url)
-	# Not all the transports are bright enough to handle basic
-	# auth URL syntax, so we parse them out of the URL and cook up
+        # Not all the transports are bright enough to handle basic
+        # auth URL syntax, so we parse them out of the URL and cook up
         # the proper headers.
         auth, host = urllib.splituser(netloc)
         if auth is not None:
@@ -1597,10 +1616,10 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         """ upgrade from 0.5.1 (or earlier?) to current version.
         """
         out = []
-	for attr in ('user', 'pwd', 'override', 'override_user'):
-	    if hasattr(aq_base(self), attr):
+        for attr in ('user', 'pwd', 'override', 'override_user'):
+            if hasattr(aq_base(self), attr):
                 out.append('Deleting attribute %s' % attr)
-		delattr(self, attr)
+                delattr(self, attr)
         old_dest = getattr(aq_base(self), 'dest_server', None)
         if old_dest is None or self.dest_servers:
             out.append("No old destinations to fix for %s" % self.getId())
@@ -1689,4 +1708,5 @@ class _ZPCMethodProxy(_BaseMethodProxy):
         if ok:
             return result
         raise result[0], result[1]
+
 

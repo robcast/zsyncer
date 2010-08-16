@@ -1,3 +1,37 @@
+
+Version 0.7.2 (UNRELEASED):
+
+ BREAKING CHANGES:
+
+ - We now REQUIRE Zope 2.7 or later.
+   Does not work with 2.6 anymore.
+   *Probably* works with 2.7 but if you have problems, 2.8 is
+    recommended.
+
+ Features added:
+
+ - A ZSyncer instance now has a config option to delete talkback
+   comments when objects are received. Defaults to off.
+   Not thoroughly tested!
+
+ Bugs fixed:
+
+ - Hopefully fixed sf bug #1469129: plone calls an action's condition
+   expression before checking its permission expression, so, anonymous 
+   couldn't browse the site.
+
+ - Fixed sf bug #1352783: icons disappeared when virtual hosting.
+
+ - Tests for acquisition bugs, seem to be fixed now.
+
+ Refactoring:
+
+ - Removed use of zLOG, we now use the python logging module instead.
+   (requires Zope 2.7)
+
+ - Started using absolute_url_path(). (requires Zope 2.7)
+
+
 Version 0.7.1 (2005/04/10):
 
  Bugs fixed:
@@ -418,3 +452,4 @@ between source and destination boxes.
 -	Changed all references of development to source
 -	Changed all instances of unrestrictedTraverse to restrictedTraverse, 
 will make security a little better.
+

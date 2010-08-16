@@ -9,7 +9,7 @@ Work in progress, may not actually do much yet!
 import copy
 
 # Zope imports.
-from AccessControl import ClassSecurityInfo
+from AccessControl import ClassSecurityInfo, Permissions
 from Acquisition import aq_base
 from Globals import InitializeClass, DTMLFile
 from OFS.SimpleItem import SimpleItem
@@ -192,7 +192,11 @@ class ZSyncerTool(UniqueObject, Folder, ActionProviderBase):
         syncer = self.getZSyncer(syncer)
         return syncer._getObject(path)
 
-    security.declareProtected(ZSYNC_PERMISSION, 'isObjectDiffable')
+    # sf bug #1469129: plone calls an action's condition expression before
+    # checking its permission expression. So, don't restrict this method
+    # too much. "View" is adequate protection, and the action
+    # is still protected by its own permission anyway.
+    security.declareProtected(Permissions.view, 'isObjectDiffable')
     def isObjectDiffable(self, obj):
         """
         Is the object diffable?

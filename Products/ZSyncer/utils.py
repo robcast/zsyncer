@@ -210,3 +210,16 @@ def listSyncers(context):
     return urls
 
 
+def kill_talkback_comments(folder):
+    """Remove all talkback comments // mlt <MTitov@microtest.ru>
+    """
+    if hasattr(aq_base(folder), 'talkback'):
+        for comment_id in folder.talkback.objectIds():
+            try:
+                folder.talkback.deleteReply(comment_id)
+            except:
+                pass
+    else:
+        for subfolder in folder.objectValues():
+            killhere(subfolder)
+

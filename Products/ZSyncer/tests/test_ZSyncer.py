@@ -26,22 +26,47 @@ ZopeTestCase.installProduct('ZSyncer')
 from AccessControl import Unauthorized, getSecurityManager
 from DateTime import DateTime
 from OFS.Traversable import NotFound
-from Products.ZSyncer.ZSyncer import manage_addZSyncer
-from Products.ZSyncer.utils import ZSyncerObjNotFound, ZSyncerConfigError
 from Products.ZSyncer import Config, ZSyncer, utils
+from Products.ZSyncer.ZSyncer import manage_addZSyncer
+from Products.ZSyncer.utils import StatusMsg
+from Products.ZSyncer.utils import ZSyncerObjNotFound, ZSyncerConfigError
 from zExceptions import BadRequest
-
-
-## standard_permissions = ZopeTestCase.standard_permissions
-## access_permissions   = ['View management screens']
-## change_permissions   = ['Change Python Scripts']
-## all_permissions      = standard_permissions + access_permissions + \
-##                        change_permissions
 
 # Create the error_log object, must be done before starting the server.
 ZopeTestCase.utils.setupSiteErrorLog()
 # Start the web server, needed for remote tests.
 host, port = ZopeTestCase.utils.startZServer(number_of_threads=4)
+
+# Some tests need _p_jar or _p_oid, but unfortunately the way to get those
+# has changed in ZODB. Let's try to be compatible.
+try:
+    transaction.savepoint
+    # Must be zope 2.8 or later.
+    _use_savepoints = True
+except NameError:
+    _use_savepoints = False
+if _use_savepoints:
+    class _Savepointer:
+        def __init__(self):
+            self.sp = transaction.savepoint()
+        def rollback(self):
+            if self.sp.valid:
+                self.sp.rollback()
+            else:
+                # WTF?
+                pass
+else:
+    class _Savepointer:
+        def __init__(self):
+            transaction.commit(1)
+        def rollback(self):
+            try:
+                transaction.abort(1)
+            except:
+                # WTF?
+                transaction.abort()
+def _make_savepoint():
+    return _Savepointer()
 
 def _makeFile(id, title='', text='', container=None ):
     # Helper for setup: make an object to play with.
@@ -359,10 +384,10 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
         # use the subtransaction hack to get a _p_oid and _p_jar.
         exp_data = cStringIO.StringIO()
         try:
-            transaction.commit(1)
+            sp = _make_savepoint()
             self.file1._p_jar.exportFile(self.file1._p_oid, exp_data)
         finally:
-            transaction.abort(1)
+            sp.rollback()
         exp_data = exp_data.getvalue()
         # Calling w/ the correct path and None should remove the file.
         status = self.zs1.manage_replaceObject(path, None)
@@ -387,11 +412,11 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
         new_path = ('folder2', self.file1_id)
         try:
             # sigh... the new folder needs a _p_jar too.
-            transaction.commit(1)
+            sp = _make_savepoint()
             new_status = self.zs1.manage_replaceObject(new_path, exp_data)
             self.assertEqual(new_status, 200)
         finally:
-            transaction.abort(1)
+            sp.rollback()
 
         # XXX try with OrderFolder and verify that order is preserved.
         # XXX try with something that has a DAV lock and ensure that
@@ -514,13 +539,13 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
         # We need the object to have an OID.
         # Use the stupid subtransaction trick to make that happen.
         try:
-            transaction.commit(1)
+            sp = _make_savepoint()
             data = ged(path)
             expected = self.folder.manage_exportObject(self.file1.getId(),
                                                       download=1)
             self.assertEqual(data, expected)
         finally:
-            transaction.abort(1)
+            sp.rollback()
 
     def test_call_(self):
         from cPickle import dumps, loads
@@ -729,7 +754,8 @@ class RemoteSetUp:
         manage_addZSyncer(self.folder2, 'zs2')
         self.zs2 = self.folder2.zs2
         # Now use that syncer as the destination from our first syncer.
-        self.destination = self.zs2.absolute_url()
+        self.destination = self.zs2.absolute_url().replace(
+            'http://', 'http://%s:%s@' % (user_name, user_password))
         self.zs1.manage_changeProperties(dest_servers=self.destination)
         # Let's create a more-or-less identical object in folder2.
         _makeFile(self.file1_id, text=self.file1_text,
@@ -973,7 +999,7 @@ class TestRemoteMethods(RemoteSetUp, ZSyncerSetUp,
         # the change in the main test thread.  We need a _p_jar to do
         # that, so let's do the subtransaction hack.
         try:
-            transaction.commit(1)
+            sp = _make_savepoint()
             # Let's try one that is found relative to zs2.
             # Note that this is EXTRA from the point of view of zs1.
             response = self.zs1._deleteRemote(self.destination,
@@ -985,7 +1011,8 @@ class TestRemoteMethods(RemoteSetUp, ZSyncerSetUp,
             self.assertRaises(KeyError, self.app.unrestrictedTraverse,
                               extra_path)
         finally:
-            transaction.abort(1)
+            sp.rollback()
+
 
     def test_exportToRemote(self):
         path = self.zs1._getRelativePhysicalPath(self.file_missing)
@@ -1012,10 +1039,9 @@ class TestRemoteMethods(RemoteSetUp, ZSyncerSetUp,
         self.assertEqual(path, self.file_extra.getPhysicalPath())
         # Now try passing positional arguments...
         # first verify that the state is clean.
-        self.assertEqual(self.zs1.callRemote(server_url,
-                                             self.file_extra.getId(),
-                                             'propertyIds'),
-                         ['title', 'alt', 'content_type'])
+        self.failIf('sillyFlag' in self.zs1.callRemote(server_url,
+                                                       self.file_extra.getId(),
+                                                       'propertyIds'))
         self.zs1.callRemote(server_url, self.file_extra.getId(),
                             'manage_addProperty',
                             'sillyFlag', 1, 'boolean')
@@ -1153,10 +1179,7 @@ class TestRemoteMethods(RemoteSetUp, ZSyncerSetUp,
         # ... no error, and we should have the object locally now.
         self.assertEqual(msgs[0].status, 200)
         self.failUnless(self.file_extra.getId() in self.folder.objectIds())
-##         # Try giving the folder name. This should be harmless, if
-##         # useless.
-##         new_msgs = self.zs1.manage_pullFromRemote(self.folder.getId(), path)
-##         self.assertEqual(new_msgs, msgs)
+
 
     def test_manage_touch(self):
         missing_path = self.zs1._getRelativePhysicalPath(self.file_missing)
@@ -1174,6 +1197,96 @@ class TestRemoteMethods(RemoteSetUp, ZSyncerSetUp,
         self.failUnless(msgs)  # should be non-empty.
         for m in msgs:
             self.failIf(m.status > 200)
+
+
+class TestRemoteAcquisition(RemoteSetUp, ZSyncerSetUp,
+                            ZopeTestCase.Sandboxed,
+                            ZopeTestCase.ZopeTestCase):
+
+    """Regression tests for acquisition issues.
+    """
+
+    def test_aq_bug_1161733(self):
+        # Consider this scenario:
+        #Source has this folder tree:
+        #    A / B / C
+        #    C /
+        #So there are two folders named C:
+        # one in root, one in C.
+        self.folder.manage_addFolder('A')
+        self.folder.A.manage_addFolder('B')
+        self.folder.A.B.manage_addFolder('C')
+        self.folder.manage_addFolder('C')
+        zs1 = self.zs1
+        self.zs1.manage_changeProperties(
+            use_relative_paths=1,
+            relative_path_base=self.folder.absolute_url_path()
+            )
+        # The Destination has this folder tree:
+        # A/ B/
+        # C/
+        #... so it is the same as source tree, but missing A/B/C/
+        self.folder2.manage_addFolder('A')
+        self.folder2.A.manage_addFolder('B')
+        self.folder2.manage_addFolder('C')
+        # That's the setup.
+
+        # BUG 1: If you use zsyncer from the source server, and
+        #go to A/B/C, manage_compare SHOULD compare as 'missing'
+        # ... but with the bug, it comes back 'ok', acquired from
+        # /C on the remote side.
+        self.folder2.C.manage_addFolder('should_be_extra')
+        transaction.commit()
+        results = self.zs1.manage_compare('A/B/C')
+        self.assertEqual(results[0]['id'], 'C')
+        self.assertEqual(results[0]['status'], 'missing')
+
+        # BUG 2: If you sync something
+        #expecting it to end up in /A/B/C/, it would accidentally
+        #show up in /C.
+        # Correct behavior: We SHOULD get 404, and nothing gets synced.
+        _makeFile('newfile', text='xyz', container=self.folder.A.B.C)
+        # Need a _p_jar, do the subtransaction hack again.
+        sp = transaction.savepoint()
+        msgs = zs1.manage_pushToRemote('A/B/C/newfile')
+        self.assertEqual(msgs[-1].status, 404)
+        zs1._p_jar.sync()
+        self.failIf('newfile' in self.folder2.C.objectIds())
+
+        # BUG 3: Similarly, if you remotely delete A/B/C,
+        # you would actually be deleting /C.
+        # Correct behavior: 404, no deletion.
+        msgs = zs1.manage_deleteRemote('A/B/C')
+        self.assertEqual(msgs[-1].status, 404)
+        zs1._p_jar.sync()
+        self.failUnless('C' in self.folder.A.B.objectIds())
+
+    def test_aq_bug_1708093(self):
+        zs1 = self.zs1
+        # see http://sourceforge.net/tracker/index.php?func=detail&aid=1708093&group_id=28073&atid=392340
+        # I place a folder named A in the root of my portal, and
+        # inside this folder another document named A.
+        self.folder.manage_addFolder('A')
+        _makeFile('A', text='can i clobber folders?',
+                  container=self.folder.A)
+        transaction.commit()
+        zs1.manage_pushToRemote('A')
+        self.failUnless('A' in self.folder2.objectIds('Folder'))
+        self.failUnless('A' in self.folder2.A.objectIds('File'))
+        # If I remove the A (document) inside the folder with
+        # "manage_deleteRemote" all is still ok.
+        zs1.manage_deleteRemote('A/A')
+        self.failUnless('A' in self.folder2.objectIds('Folder'))
+        self.failIf('A' in self.folder2.A.objectIds('File'))
+        #If, after that, I push again the document A inside the folder
+        #with "manage_pushToRemote" I find that the A document has
+        #overwritten the folder A on the target server and so I find
+        #the document A in the portal root.
+        zs1.manage_pushToRemote('A/A')
+        # IF the bug is fixed, self.folder2.A should be a folder, not a file.
+        self.failUnless('A' in self.folder2.objectIds('Folder'))
+        # And it should contain the file.
+        self.failUnless('A' in self.folder2.A.objectIds('File'))
 
 
 class MockZSyncer(ZSyncer.ZSyncer):
@@ -1274,6 +1387,7 @@ def test_suite():
     suite.addTest(makeSuite(TestZSyncerBasics))
     suite.addTest(makeSuite(TestManageApprovedAction))
     suite.addTest(makeSuite(TestRemoteMethods))
+    suite.addTest(makeSuite(TestRemoteAcquisition))
     suite.addTest(makeSuite(TestUIFunctional))
     return suite
 

@@ -2,9 +2,11 @@
 Utils to help with global configuration of your ZSyncer installation.
 """
 import sys, types
-import zLOG
 from Globals import DTMLFile
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
+
+import logging
+logger = logging.getLogger('event.ZSyncer')
 
 def _import(modpath, classname):
     # techniques swiped from
@@ -37,7 +39,7 @@ def _addSyncTab(klass, isZObject=0):
     try:
         manage_options = list(klass.manage_options)
     except TypeError:
-        zLOG.LOG('ZSyncer', 100, 'problem with m_o of %s' % klass)
+        logger.warning('problem with m_o of %s', klass)
         raise
     # Does the manage_options list already have this label?
     # If not, add it.  This is not perfect, since "Sync" is

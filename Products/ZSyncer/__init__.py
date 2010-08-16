@@ -1,5 +1,4 @@
 # Zope imports.
-from zLOG import LOG, INFO, PROBLEM
 from Globals import ImageFile
 from AccessControl import ModuleSecurityInfo
 
@@ -8,16 +7,20 @@ import ZSyncer
 from Config import sync_tab_classes
 from ConfigUtils import _import, _addSyncTab
 
+# logging
+import logging
+logger = logging.getLogger('event.ZSyncer')
+
 # Try to import CMF, if so try to import ZSyncerTool, otherwise
 # dont bother ;)
 try:
     from Products.CMFCore.utils import ToolInit
     CMF = 1
-    LOG('ZSyncer', INFO, 'CMF installed, will set up ZSyncerTool')
+    logger.info('CMF installed, will set up ZSyncerTool')
     from ZSyncerTool import ZSyncerTool
 except ImportError:
     CMF = 0
-    LOG('ZSyncer', INFO, 'CMF not installed, will not set up ZSyncerTool')
+    logger.info('CMF not installed, will not set up ZSyncerTool')
 
 
 # helps with installation of CMF tool
@@ -60,9 +63,8 @@ for modpath, classname in sync_tab_classes:
         klass = _import(modpath, classname)
         _addSyncTab(klass, isZObject)
     except ImportError:
-        LOG('ZSyncer', INFO, 'Failed to add tab to %s, %s; not installed?' % (
-            modpath, classname)
-            )
+        logger.info('Failed to add tab to %s, %s; not installed?',
+                    modpath, classname)
         continue
 
 misc_ = {}

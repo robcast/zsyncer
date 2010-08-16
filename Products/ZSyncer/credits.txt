@@ -38,7 +38,12 @@ Contributors (alphabetical order):
 
  Charlie Reiman helped out a lot during the 0.5 releases.
 
+ Mikhail L. Titov added a feature to remove talkback comments.
+
  Joachim Werner came up with some cool UI suggestions for 0.3, thanks.
+
+ Chris Withers killed off zLOG.
+
 
 --
 

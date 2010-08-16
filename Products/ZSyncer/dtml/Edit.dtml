@@ -85,6 +85,28 @@
                 <tr>
                     <td colspan="3"><hr size="1">
                 </tr>
+
+
+                <tr>
+                    <td class="form-label">
+                          Strip talkback comments:
+                    </td>
+                    <td ><input type="checkbox" value="0"
+                                name="strip_talkback_comments:boolean"
+                            <dtml-if strip_talkback_comments>checked</dtml-if>>
+                    </td>
+                    <td>
+                        If checked, talkback comments will be removed from
+                        all objects pushed to this ZSyncer.
+                    </td>
+                </tr>
+
+
+                <tr>
+                    <td colspan="3"><hr size="1">
+                </tr>
+
+
                 <tr>
                     <td align="RIGHT" valign="TOP" class="form-label">Filter types?</td>
                     <td><input type="checkbox" value="1" name="filterObjects:boolean" <dtml-if filterObjects>checked</dtml-if>></td>

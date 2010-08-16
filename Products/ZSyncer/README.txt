@@ -24,22 +24,22 @@ Installation
   without this. Command-line http clients such as lynx or wget may be
   helpful for testing the connection.
 
-  It is highly advisable to be sure that the system clock on all source
-  and destination servers are synchronized or at least very close. 
-  On Unix, NTP may be a very good idea.
+  It is highly advisable to be sure that the system clock on all your
+  servers are synchronized or at least very close.  On Unix, using
+  NTP may be a very good idea.
 
 Requirements
 
 
-  Zope 2.7 is recommended.
+  Zope 2.7 is the minimum recommended version.
+  Zope 2.6 and lower are NOT supported anymore.
 
-  Zope 2.8 should work too, but there are two errors in the test suite;
-  not sure if these translate to real-world problems.
+  Zope 2.8 or 2.9 should work too.  Untested with 2.10 yet.
 
-  WARNING, Zope 2.9 is NOT supported yet.
-
-  Zope 2.6.x should still work, but no guarantees.
-  We will drop support for 2.6 or earlier very soon.
+  To run the tests under Zope 2.7, you will need to install ZopeTestCase,
+  from http://www.zope.org/Members/shh/ZopeTestCase
+  Installation instructions are at
+  http://www.zope.org/Members/shh/ZopeTestCaseWiki/InstallationInstructions
 
 
 Upgrading from Earlier Versions
@@ -198,22 +198,38 @@ CMF / Plone / CPS support
   Another, possibly better, option would be to integrate ZSyncer into
   your workflow.  This is left as an excercise for the reader :-)
 
-  Note that at this time, Plone's ATContentTypes are not supported
-  by the "diff" feature. You can fix this by adding appropriate
-  method names to the diff_methods dictionary in Config.py.
 
 Configuring ZSyncerTool
 
   When you run the installer as described above, your CMF site gets a
   ZSyncerTool created. By default the tool contains one ZSyncer
   instance, named Default.
+
   This ZSyncer is preconfigured to use the CMF site as its
   base path. It does NOT have a destination configured (how could it
   guess?).  You must configure it yourself.
-  The configuration is done on the ZSyncer instance ("Default"),
-  not on the ZSyncerTool instance ("portal_zsyncer").
 
-CMF Timezone bug:
+  The configuration is done on the ZSyncer instance (i.e.
+  "portal_zsyncer/Default"), not on the ZSyncerTool instance 
+  ("portal_zsyncer").
+
+
+Known Plone Issues
+
+  * ATContentTypes don't work with the "diff" feature.
+    You can fix this by adding appropriate
+    method names to the diff_methods dictionary in Config.py.
+
+  * Order of content objects in folders is not preserved
+    when you sync in Plone 2.1.  Patches welcome!
+
+  * Sync Status doesn't work in Plone 2.1 when viewing a page
+    that's set as the default view for a folder.
+    See http://dev.plone.org/plone/ticket/5082
+    and https://sourceforge.net/tracker/index.php?func=detail&aid=1397852&group_id=28073&atid=392340
+
+
+CMF Timezone bug
 
   If you sync across multiple timezones, everything should "just
   work".  There was a problem prior to CMF 1.5.1 in that the
@@ -223,7 +239,8 @@ CMF Timezone bug:
   does not display the timezone. In CMF 1.5.1 this was fixed to
   convert the date into the local timezone before display.
 
-Known Issues
+
+Other Known Issues
 
   The "status" display can easily be wrong. We rely on
   bobobase_modification_time for objects that don't provide DublinCore

@@ -60,6 +60,11 @@ Configuring ZSyncer
 
     - Approval?: Require confirmation before performing actions.
 
+    - Delete talkback comments:  Comments will be removed from
+      all received objects that use "talkback" commenting.
+      Set this on the destination ZSyncer; it has no effect on the
+      source ZSyncer.
+
     - Syncable types: what meta types you want to sync. See below for
       info.
 

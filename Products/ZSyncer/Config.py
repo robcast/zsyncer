@@ -90,10 +90,10 @@ colours = {
     }
 
 icons = {
-    'ok': '/misc_/ZSyncer/zsyncer_ok.gif',
-    'out of date': '/misc_/ZSyncer/zsyncer_outdated.gif',
-    'missing': '/misc_/ZSyncer/zsyncer_missing.gif',
-    'extra': '/misc_/ZSyncer/zsyncer_extra.gif',
+    'ok': 'misc_/ZSyncer/zsyncer_ok.gif',
+    'out of date': 'misc_/ZSyncer/zsyncer_outdated.gif',
+    'missing': 'misc_/ZSyncer/zsyncer_missing.gif',
+    'extra': 'misc_/ZSyncer/zsyncer_extra.gif',
 }
 
 # descriptions:

@@ -15,11 +15,9 @@ Cleanup / Refactoring:
    Also clean up the UI to more consistently use StatusMsg and
    response streaming.  Probably some refactoring to do there.
 
-   In fact, the whole error / response / message-handling system could
-   probably stand to be redone. (See recent threads re. handling of
-   "chunking" - apparently we may be able to remove the size-guessing
-   hacks.)
-
+   Our separate logfile should be reimplemented using the python logging
+   module.  (It would also be nice if there were a config option to
+   mix these in to zope's standard event log.) 
 
 
 TESTING:
@@ -74,6 +72,9 @@ PERFORMANCE ISSUES:
    Further possible optimization: for pull only: Use a separate thread
    (or process?)  to build the pickle to a temp file, and send it back
    in chunks with a content-range with an empty total size.
+   Or - probably better - _p_jar.exportFile() can write to
+   a TemporaryFile; we could use a zpublisher IStreamIterator
+   implementation, maybe the default one would just work.
 
    For push, there doesn't seem to be anything like content-range for
    POST.  So I probably have to start uploading after building the
