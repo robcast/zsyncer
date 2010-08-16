@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML lang="en">
+<HEAD>
+<TITLE>Diff</TITLE>
+</HEAD>
+<BODY>
+<span tal:replace="structure context/manage_tabs" />
+<p><b>Diff</b> of <span tal:replace="request/object_id" /></p>
+
+<span tal:define="diffresult python:context.manage_diffObject(object_path=request['object_id']);
+                  diff diffresult/diff;
+                  local_src diffresult/source;
+                  remote_src diffresult/dest;
+		  error diffresult/error;
+		  "
+>
+
+
+ <div metal:define-macro="diff_macro">
+  <span tal:condition="not: error"
+        tal:content="structure diff">
+    Diff table goes here.
+  </span>
+  <span tal:condition="error">
+    <b>Error:</b>
+      <p tal:content="structure error">
+        Error info goes here.
+      </p>
+    <hr />
+    <b>Local object source:</b>
+    <p>
+     <pre tal:content="local_src">
+       Source goes here.
+     </pre>
+    </p>
+    <hr />
+    <b>Remote object source:</b>
+    <p>
+     <pre tal:content="remote_src">
+       Source goes here.
+     </pre>
+    </p>
+  </span>
+ </div>
+
+</span>
+
+<p> [ <a tal:attributes="href string:manage_sync?folders=${request/folder}">
+        Return to the syncer
+     </a> ]
+</p>
+</BODY>
+</HTML>

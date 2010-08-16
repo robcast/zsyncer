@@ -1,0 +1,275 @@
+<dtml-if "REQUEST.form.has_key('msg')">
+  <table width="100%" border="1">
+    <tr>
+      <td><ul><dtml-var "REQUEST.form['msg']"></ul></td>
+    </tr>
+  </table>
+</dtml-if>
+
+<dtml-call "REQUEST.set('old_folder', '')">
+<!-- breadcrumbs -->
+<div class="std-text">
+
+<dtml-with "traverseFromRoot(folder)">
+ <dtml-if icon>
+  <img src="&dtml-icon;" />
+ </dtml-if>
+</dtml-with>
+
+<dtml-in "folder.split('/')" prefix="sequence">
+  <dtml-if sequence_start>
+    <a href="&dtml-absolute_url;/manage_sync?mode=classic" class="link">
+      <dtml-var getSyncerRootId>
+    </a> /
+    <dtml-if use_relative_paths>
+      <a class="link"
+         href="&dtml-absolute_url;/manage_sync?mode=classic&folder=&dtml-sequence_item;">&dtml-sequence_item;
+      </a>
+     <dtml-call "REQUEST.set('old_folder', _.str(sequence_item))" >
+    </dtml-if>
+  <dtml-else>
+    <dtml-if "sequence_item!=''">
+      <dtml-call "REQUEST.set('old_folder', old_folder+'/'+_.str(sequence_item))">
+      / <a href="&dtml-absolute_url;/manage_sync?folder=&dtml-old_folder;&mode=classic" class="link"><dtml-var sequence_item></a>
+    </dtml-if>
+  </dtml-if>
+</dtml-in>
+
+</div>
+<hr size="1">
+
+<script language="javascript" type="text/javascript">
+<!--
+function toggle_checks() {
+  var elems = document.sync_form.elements;
+  var i;
+  for (i=0;i<elems.length;i++) {
+    if (elems[i].type=="checkbox") {
+      elems[i].checked = !elems[i].checked;
+    }
+  }
+}
+//-->
+</script>
+
+<!-- set the mode -->
+<form method="GET" 
+ action="&dtml-absolute_url;/manage_sync">
+ <input type="hidden" name="folder" value="&dtml-folder;" />
+
+ <table border="0" bgcolor="#EEEEEE" width="100%">
+  <tr>
+   <td class="form-element">
+   <b>Comparison Mode:</b>
+    <input type="radio" name="mode" value="classic"
+     <dtml-if "REQUEST.get('mode')!='recursive'"> checked="checked" </dtml-if>
+    /> 
+     This folder only
+    <input type="radio" name="mode" value="recursive"
+     <dtml-if "REQUEST.get('mode')=='recursive'"> checked="checked" </dtml-if>
+      />
+      Search in subfolders (slow!)
+   </td>
+  </tr>
+  <tr>
+   <td class="form-element"><b>Show items whose status is:</b>
+    <dtml-let statuses="('ok', 'out of date', 'missing', 'extra')">
+    <dtml-in statuses prefix="sequence">
+     <dtml-let checked="sequence_item in REQUEST.get('show_status',
+   statuses) and 1 or 0">
+     <img src="<dtml-var "status_icon(sequence_item)">"
+      alt="<&dtml-sequence_item;>" title=" &dtml-sequence_item; ">
+     <input type="checkbox" name="show_status:list" 
+       <dtml-if checked>
+         checked="checked"
+       </dtml-if>
+      value="&dtml-sequence_item;"> 
+        &nbsp;&nbsp;
+     </dtml-let>
+    </dtml-in>
+    </dtml-let>
+    &nbsp;&nbsp;&nbsp;<input type="submit" value=" Reload " />
+   </td>
+  </tr>
+ </table>
+
+</form>
+
+<dtml-try>
+
+<dtml-if "REQUEST.get('mode') != 'recursive'">
+   <dtml-call "REQUEST.set('results', manage_compare(folder, REQUEST=REQUEST)[1])" > 
+<dtml-else>
+    <dtml-call "REQUEST.set('results', manage_compare(folder, recurse=1, REQUEST=REQUEST)[1])" > 
+</dtml-if>
+
+<dtml-if results>
+
+<dtml-try>
+<form name="sync_form" method="POST" action="&dtml-absolute_url;">
+   <input type="hidden" name="folder" value="&dtml-folder;">
+
+   <table border="0" cellpadding="2" cellspacing="0" width="100%">
+      <tr class="list-header">
+        <td class="list-item">Select</td>
+        <td class="list-item">Status</td>
+        <td class="list-item"></td>
+        <td class="list-item">Object</td>
+        <td class="list-item">Action</td>
+	<td class="list-item" align="right">Size (Source)</td>
+        <td class="list-item" align="right">Modified (Source)</td>
+        <td class="list-item" align="right">Modified (Destination)</td>
+      </tr>
+   
+    <dtml-in results  mapping prefix="sequence">
+
+      <dtml-let 
+                pathRel="relative_path"
+                pathURL="absolute_url_path"
+                id_or_path="id_or_path">
+      <tr <dtml-if sequence_even>class="row-hilite"</dtml-if>>
+        <!-- SELECTION -->
+        <td align="center" class="list-item">
+            <input type="checkbox" name="object_paths:list:required" value="&dtml-pathRel;">
+        </td>
+
+	<!-- STATUS -->
+        <td class="list-item" align="center">
+           <img src="&dtml-status_icon;"
+	        alt=" &dtml-status; "  
+		title=" &dtml-status; " />
+        </td>
+        <td class="list-item"  align="center">
+            <dtml-if icon><img src="&dtml-icon;" alt="&dtml-meta_type;"></dtml-if>
+        </td>
+
+	<!-- ID or PATH -->
+        <td class="list-item"  align="left">
+          <dtml-if "is_folder and status not in ('missing', 'extra')">
+            <a href="&dtml-absolute_url;/manage_sync?folder=&dtml-pathRel;&mode=&dtml-mode;">&dtml-id_or_path;</a>
+          <dtml-else>
+            &dtml-id_or_path;
+          </dtml-if>
+        </td>
+	<!-- ACTIONS -->
+        <td class="list-item"><dtml-if "status != 'extra'">
+           <a href="&dtml-pathURL;/manage_workspace">Manage</a> | <a href="&dtml-pathURL;">View</a></dtml-if>
+           <dtml-if "sequence_item['is_diffable']">
+             | <a href="&dtml-absolute_url;/manage_diff?object_id=&dtml-pathRel;&folder=<dtml-var old_folder>">Diff</a>
+           </dtml-if>
+        </td>
+	<!-- SIZE -->
+	<td class="list-item" align="right">
+	  <dtml-if "status != 'extra'">
+	    <dtml-var size>
+	  </dtml-if>
+	</td>
+	<!-- MOD TIMES -->
+        <td class="list-item" align="right"><dtml-var src_best_modtime></td>
+        <td class="list-item" align="right"><dtml-var dest_best_modtime></td>
+     </tr>
+    </dtml-let>
+   </dtml-in>
+
+      <tr>
+        <td  class="list-item" colspan="8">
+	<input type="submit"
+               name="<dtml-if approval>manage_approval:method<dtml-else>manage_pushToRemote:method</dtml-if>" 
+               value="   Put   "
+	       title=" Sync selected object(s) to remote server(s). " 
+	       />
+	<input type="submit"
+               name="<dtml-if approval>manage_approval:method<dtml-else>manage_pullFromRemote:method</dtml-if>" 
+               value="   Get   "
+	       title=" Retrieve selected object(s) from remote server. "
+	       />
+        <input type="submit"
+               name="<dtml-if approval>manage_approval:method<dtml-else>manage_syncDelete:method</dtml-if>"
+	       value=" Delete "
+	       title=" Delete selected object(s) from local and remote servers. "
+		/>
+        <input type="submit"
+               name="<dtml-if approval>manage_approval:method<dtml-else>manage_touch:method</dtml-if>"
+	       value=" Touch "
+	       title=" Update selected objects' timestamp on local and remote servers. " 
+		/>
+
+<script language="javascript" type="text/javascript">
+<!-- // Hide toggle button from non-scripting user-agents
+document.write('<input type="button" value="Select All" title="Toggle selection of all objects" onclick="javascript:toggle_checks();return false;">');
+//-->
+</script>
+	</td>
+
+      </tr>
+   </table>
+ </form>
+<dtml-except>
+   <div class="std-text">
+     <ul> Whoops, Error!
+      <li><dtml-var error_type>
+      <li><dtml-var error_value>
+      <li><dtml-var error_tb newline_to_br>
+      <li><dtml-var results>
+     </ul>
+   </div>
+</dtml-try>
+
+ <dtml-else>
+        <div class="form-label"><i>No matching objects found</i></div>
+ </dtml-if>
+
+
+<dtml-except>
+  <div class="std-text">
+    There was a problem with that comparison.
+    <br /><br />
+
+    Things to check:
+
+    <ul>
+      <dtml-in "getErrorAdvice(error_type, error_value)" prefix="sequence">
+        <li>
+	  <dtml-var sequence_item>
+	</li>
+      </dtml-in>
+    </ul>
+
+    Error details:
+    <ul>
+     <li><dtml-var error_type></li>
+     <li>&dtml-error_value;</li>
+     <li><dtml-var error_tb newline_to_br></li>
+    </ul>
+  </div>
+</dtml-try>
+
+
+<hr size="1">
+
+<p><b>Key:</b>
+<table>
+ <dtml-in  "('ok', 'out of date', 'missing', 'extra')" prefix="seq">
+   <tr>
+     <dtml-let icon_path="status_icon(seq_item)"
+               label="status_descr(seq_item)"
+	       color="status_colour(seq_item)">
+     <td class="form-label">
+        <img src="&dtml-icon_path;"
+             alt="&dtml-seq_item;" 
+	     title="&dtml-seq_item;"
+	     style="background-color: &dtml-color;" />
+     </td> 
+     <td class="form-label"  style="background-color: &dtml-color;">
+       <dtml-var seq_item>
+     </td>
+     <td class="form-help">
+        <dtml-var label>
+     </td>
+    </dtml-let>
+   </tr>
+ </dtml-in>
+
+</table>
+
+</p>

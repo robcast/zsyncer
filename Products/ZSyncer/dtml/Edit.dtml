@@ -1,0 +1,160 @@
+<dtml-var manage_page_header>
+        <dtml-var manage_tabs>
+
+        <form action="manage_editProperties" method="POST">
+            <table cellspacing="2">
+                <tr>
+                    <td align="RIGHT" valign="TOP" class="form-label">Title:</td>
+                    <td align="LEFT" valign="CENTER"><input type="TEXT" name="title" size="25" value="<dtml-var title>"></td>
+                    <td>&nbsp;</td>
+                </tr>
+                <tr>
+                    <td align="RIGHT" valign="TOP" class="form-label">Destinations:</td>
+                    <td align="LEFT" valign="CENTER">
+<textarea nowrap cols="60" name="dest_servers:tokens:ignore_empty" rows="5"><dtml-in dest_servers><dtml-var sequence-item>
+</dtml-in></textarea>
+                    </td>
+                    <td>&nbsp;</td>
+                </tr>
+
+		<tr>
+		    <td align="RIGHT" valign="TOP" class="form-label">Connection
+                    type:</td>
+		    <td class="form-element">
+
+                        <input type="radio" name="connection_type"
+                         value="ConnectionMgr"
+			 <dtml-if
+                    "connection_type=='ConnectionMgr'">checked</dtml-if>
+		          /> ConnectionMgr 
+
+			<input type="radio" name="connection_type"
+			 value="ZPublisher.Client"
+			 <dtml-if
+                    "connection_type=='ZPublisher.Client'">checked</dtml-if>
+		          /> ZPublisher.Client
+
+<!-- XXX still broken
+		        <input type="radio" name="connection_type"
+			 value="xml-rpc" 
+			 <dtml-if
+                    "connection_type=='xml-rpc'">checked</dtml-if>
+		          /> XML-RPC
+-->
+
+		    </td>
+		</tr>
+
+		<tr>
+		    <td align="RIGHT" valign="TOP" class="form-label">Use relative
+                    paths:</td>
+		    <td colspan="2"><input type="checkbox" value="1"
+                    name="use_relative_paths:boolean"
+		    <dtml-if use_relative_paths>checked</dtml-if>>
+		    <span class="form-help">(If checked, objects will be found relative
+                    to this zsyncer instead of relative to the zope
+                    root. Also, if checked, you cannot sync anything
+                    higher than base path. If checked but no base path is
+                    provided, this ZSyncer's parent container will be
+		    used.)</span>
+		    <br />Base Path:
+		    <input type="text" value="&dtml-getSyncerRootPath;"
+		     name="relative_path_base" />
+		    </td>
+		</tr>
+
+                <tr>
+                    <td colspan="3"><hr size="1">
+                </tr>
+
+                <tr>
+                    <td align="RIGHT" valign="TOP" class="form-label">Log?</td>
+                    <td><input type="checkbox" value="1" name="log:boolean"  <dtml-if log>checked</dtml-if>>&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>
+                <tr>
+                    <td align="RIGHT" valign="TOP" class="form-label">Log file:</td>
+                    <td align="LEFT" valign="CENTER"><input type="TEXT" name="logfile" size="50" value="<dtml-var logfile>"></td>
+                    <td>&nbsp;</td>
+                </tr>
+                <tr>
+                    <td align="RIGHT" valign="TOP" class="form-label">Confirmation required?</td>
+                    <td><input type="checkbox" value="1" name="approval:boolean" <dtml-if approval>checked</dtml-if>>&nbsp;<span class="form-help">(This will automatically log as well)</span></td>
+                    <td>&nbsp;</td>
+                </tr>
+                <tr>
+                    <td colspan="3"><hr size="1">
+                </tr>
+                <tr>
+                    <td align="RIGHT" valign="TOP" class="form-label">Filter types?</td>
+                    <td><input type="checkbox" value="1" name="filterObjects:boolean" <dtml-if filterObjects>checked</dtml-if>></td>
+                    <td class="form-help">Filter types based on the list below?</td>
+                </tr>
+ 	       <dtml-let
+	         RegisteredMetaTypes="[]"
+	       >
+                <tr>
+                    <td align="right" valign="top" class="form-label">Syncable meta types:</td>
+                    <td align="left">
+<select name="syncable:list" multiple size="10">
+<dtml-in filtered_meta_types mapping>
+<dtml-call "RegisteredMetaTypes.append(name)">
+<option <dtml-if "name in syncable">selected</dtml-if>>&dtml-name;</option>
+
+</dtml-in>
+</select>
+                    <td class="form-help">Warning! Read the help.</td>
+                </tr>
+		<tr>
+                    <td align="right" valign="top" class="form-label">Additional syncable meta types:</td>
+                    <td align="left">
+<textarea name="add_syncable:lines" cols="40" rows="10"
+><dtml-in "_.reorder(add_syncable,without=RegisteredMetaTypes)" sort
+>&dtml-sequence-item;
+</dtml-in
+></textarea>		  
+		    </td>
+		    <td class="form-help">Any other meta-types not shown in the list
+                above which you want to be able to sync.
+		    </td>
+		</tr>
+	       </dtml-let>
+
+	       <tr>
+              <td colspan="3"><hr size="1">
+		  </tr>
+
+                <tr>
+                    <td align="RIGHT" valign="TOP" class="form-label">Filter out types?</td>
+                    <td><input type="checkbox" value="1" name="filterOutObjects:boolean" <dtml-if filterOutObjects>checked</dtml-if>></td>
+                    <td class="form-help">Filter out types based on the list below</td>
+                </tr>
+		<tr>
+                    <td align="right" valign="top" class="form-label">Non-syncable meta types:</td>
+                    <td align="left">
+<textarea name="non_syncable:lines" cols="40" rows="10"
+><dtml-in "_.reorder(non_syncable)" sort
+>&dtml-sequence-item;
+</dtml-in
+></textarea>		  
+		    </td>
+		    <td class="form-help">Any meta-types which you do <b>not</b> want synced.
+		    </td>
+		</tr>
+
+	       <tr>
+	          <td colspan="3">
+		   <hr />
+		  </td>
+		</tr>
+
+                <tr>
+                    <td class="form-element"><input type="submit" value=" Edit "></td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>
+			</table>
+		</form>
+
+<dtml-var manage_page_footer>
+

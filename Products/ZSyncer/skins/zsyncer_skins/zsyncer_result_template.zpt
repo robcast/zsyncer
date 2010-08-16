@@ -1,0 +1,17 @@
+<div metal:use-macro="context/main_template/macros/master">
+
+<div metal:fill-slot="main">
+
+   <h2>Sync results:</h2>
+
+    <span tal:repeat="msg options/messages">
+       <div tal:replace="structure msg/html" />
+    </span>
+
+    <form tal:attributes="action request/came_from">
+       <input type="submit" value=" OK " />
+    </form>
+
+</div>
+</div>
+

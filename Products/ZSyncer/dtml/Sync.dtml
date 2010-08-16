@@ -1,0 +1,16 @@
+<dtml-var manage_page_header>
+<dtml-var manage_tabs>
+
+<dtml-unless folder>
+  <dtml-call "REQUEST.set('folder', '')">
+</dtml-unless>
+
+<dtml-unless mode>
+  <dtml-call "REQUEST.set('mode', '')">
+</dtml-unless>
+
+
+<dtml-var manage_folders>
+
+<dtml-var manage_page_footer>
+

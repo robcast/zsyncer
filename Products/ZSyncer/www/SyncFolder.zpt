@@ -1,0 +1,32 @@
+<span tal:replace="structure context/manage_page_header" />
+<span tal:replace="structure context/manage_tabs" />
+
+<span tal:omit-tag=""
+      tal:define="dummy python:request.set('folder', context.absolute_url_path());
+                  dummy2 python:request.set('mode', request.get('mode', 'classic')); 
+                  syncers python:modules['Products.ZSyncer.utils'].listSyncers(context)">
+
+ <span tal:condition="python:len(syncers)==1"
+       tal:replace="structure python:request.RESPONSE.redirect(syncers[0]['url'])" 
+ />
+
+ <div tal:condition="python:len(syncers) > 1">
+    <span tal:replace="python:len(syncers)"> A whole lot of </span> 
+    ZSyncers found. 
+    Choose one:
+    <ul>
+      <li tal:repeat="syncer syncers">
+         <a href=""
+            tal:attributes="href syncer/url"
+            tal:content="syncer/syncer/title_or_id"> The ZSyncer </a> 
+      </li>
+    </ul>
+ </div>
+
+ <p tal:condition="not:syncers">
+  No ZSyncers found.
+ </p>
+
+</span>
+
+<span tal:replace="structure context/manage_page_footer" />

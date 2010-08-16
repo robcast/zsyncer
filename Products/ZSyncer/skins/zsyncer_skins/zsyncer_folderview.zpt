@@ -1,0 +1,233 @@
+<html metal:use-macro="context/main_template/macros/master">
+<body>
+<div metal:fill-slot="main">
+ <span tal:define="sync_tool context/portal_zsyncer;
+                   all_syncers python:sync_tool.objectIds('ZSyncer');
+                   syncer_name python:context.REQUEST.get('syncer', None);
+                   syncer python:sync_tool.getZSyncer(syncer_name);
+                   sync_obj_path python:sync_tool.getPath(context);
+                   obj_and_children_info python:sync_tool.getStatus(sync_obj_path, syncer_name, request.get('mode')=='recursive');
+                   obj_info python:obj_and_children_info[0];
+                   children_info python:obj_and_children_info[1];
+">
+
+<h3>Sync Status of
+  <span tal:replace="obj_info/relative_path"> 
+    /foo/bar/bat/baz
+  </span>
+  (<i tal:content="obj_info/meta_type"> Document </i>
+   <img tal:attributes="src obj_info/icon" />
+  ):
+</h3>
+
+
+<!-- MODE TOGGLING  -->
+<form action="">
+ <table border="0" bgcolor="#EEEEEE" width="100%">
+  <tr>
+   <td class="form-element"
+       tal:define="mode request/mode | nothing">
+   <b>Comparison Mode:</b>
+    <input type="radio" name="mode" value="classic"
+        tal:attributes="checked python:mode != 'recursive' and 'checked'" />
+      This folder only
+    <input type="radio" name="mode" value="recursive"
+        tal:attributes="checked python:mode == 'recursive' and 'checked'" />
+      Search in subfolders (slow!)
+   </td>
+  </tr>
+<!--
+  <tr>
+   <td class="form-element"><b>Show items whose status is:</b>
+    <dtml-let statuses="('ok', 'out of date', 'missing', 'extra')">
+    <dtml-in statuses prefix="sequence">
+     <dtml-let checked="sequence_item in REQUEST.get('show_status',
+   statuses) and 1 or 0">
+     <img src="<dtml-var "status_icon(sequence_item)">"
+      alt="<&dtml-sequence_item;>" title=" &dtml-sequence_item; ">
+     <input type="checkbox" name="show_status:list" 
+       <dtml-if checked>
+         checked="checked"
+       </dtml-if>
+      value="&dtml-sequence_item;"> 
+        &nbsp;&nbsp;
+     </dtml-let>
+    </dtml-in>
+    </dtml-let>
+    &nbsp;&nbsp;&nbsp;<input type="submit" value=" Reload " />
+   </td>
+  </tr>
+-->
+ </table>
+<input type="submit" value=" Reload " />
+</form>
+
+<!-- END OF MODE TOGGLING -->
+
+<form method="POST" action=""
+  name="sync_form"
+  tal:attributes="action context/absolute_url">
+
+ <div tal:condition="not:children_info">
+   <i>No matching objects found</i>
+ </div>
+
+<script language="javascript" type="text/javascript">
+<!--
+function toggle_checks() {
+  var elems = document.sync_form.elements;
+  var i;
+  for (i=0;i<elems.length;i++) {
+    if (elems[i].type=="checkbox") {
+      elems[i].checked = !elems[i].checked;
+    }
+  }
+}
+//-->
+</script>
+
+ <table style="border: solid #E0E0E0 1px;"
+     tal:condition="children_info">
+
+  <tr>
+
+   <th>
+     Select
+   </th>
+
+   <th>
+     Status
+   </th>
+   <th>
+     Object
+   </th>
+
+   <th>
+     Action
+   </th>
+
+   <th>
+     Size (kB)
+   </th>
+
+   <th>
+     Modified (Source)
+   </th>
+
+   <th>
+     Modified (Destination)
+   </th>
+
+  </tr>
+
+  <span 
+      tal:repeat="child children_info" 
+      tal:omit-tag=""
+  ><tr style="background-color: #EEE;"
+       tal:attributes="style python:repeat['child'].odd() and default">
+
+   <td>
+     <input type="checkbox" name="obj_paths:list" value=""
+      tal:attributes="value child/relative_path;" 
+     />
+
+   </td>
+
+   <td>
+     <img src="" 
+         tal:attributes="src child/status_icon;
+	                 title child/status" />
+     <span tal:replace="child/status"> OK
+     </span>
+
+   </td>
+
+   <td>
+    <img tal:attributes="src child/icon;
+                         title child/meta_type;
+			 alt child/meta_type;" />
+    <a 
+        tal:condition="child/actions/sync_status"
+        tal:attributes="href child/actions/sync_status/url"
+        tal:content="child/id_or_path"> Object path 
+    </a>
+    <span
+        tal:condition="not:child/actions/sync_status"
+	tal:replace="child/id_or_path"> Object path
+    </span>
+
+   </td>
+
+   <td>
+      <a  tal:condition="child/actions/edit"
+	  tal:attributes="href child/actions/edit/url">
+	 Edit
+      </a>
+
+      <a  tal:condition="child/actions/view"
+          tal:attributes="href child/actions/view/url">
+	 View
+      </a>
+      <a tal:condition="child/actions/diff | nothing"
+         tal:attributes="href child/actions/diff/url"
+	> Diff
+      </a>
+
+   </td>
+
+   <td>
+      <span tal:content="child/size | default"> n/a </span>
+   </td>
+
+   <td tal:content="child/src_best_modtime">
+    1/1/2001
+   </td>
+
+   <td tal:content="child/dest_best_modtime">
+     10/9/2004
+   </td>
+
+  </tr></span>
+
+ </table>
+
+ <!-- Submit buttons -->
+ <p tal:condition="children_info">
+  <input type="button" value="Select All" 
+    title="Toggle selection of all objects."
+    onclick="javascript:toggle_checks();return false;" />
+
+  <input type="hidden" name="came_from"
+   tal:attributes="value request/URL" />
+
+  <input type="hidden" name="syncer_name" value=""
+   tal:attributes="value syncer_name" />
+
+   <input type="submit" name="zsyncer_sync:method" 
+    value=" Sync " />
+   <input type="submit" name="zsyncer_delete:method" 
+    value="Delete" />
+  </p>
+ <!-- End of submit buttons -->
+ 
+  <ul>Destination servers:
+
+    <li tal:repeat="destination syncer/dest_servers"
+        tal:content="destination" > server1 </li>
+
+    <li tal:replace="nothing"> server2 </li>
+  </ul>
+
+ <p tal:condition="python:len(all_syncers) > 1"> Using syncer: 
+      <span tal:replace="syncer/title_or_id"> foo </span>
+ </p>
+
+ </form>
+
+
+ </span>
+
+</div>
+
+</body>
+</html>

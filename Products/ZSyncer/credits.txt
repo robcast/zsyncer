@@ -1,0 +1,47 @@
+ZSyncer Credits
+---------------
+see http://sourceforge.net/projects/zsyncer for current contact info.
+
+ZSyncer is based on Gregor Heine's Client-Server product.
+Not much code remains of that, but thanks for getting us going!
+
+Current Head Tinkerer: Paul M. Winkler
+ 
+Contributors (alphabetical order):
+
+ Samuel Brauer submitted some bugs and patches for 0.6.
+
+ Robert Brewer wrote an ASPN python cookbook recipe that 
+ we swiped to do dynamic imports.
+
+ Gregor Heine wrote Client-Server and helped out on version 0.3.
+
+ Amos Latteier at Zope Corp. wrote xmlrpc Basic Authentication.
+
+ Dieter Maurer wrote patches to improve cmf support and provided
+ an alternative to xmlrpc using ZPublisher.Client.
+
+ Chris McDonough reminded Andy about xmlrpc basic auth.
+
+ Andy McKay was Head Tinkerer prior to the 0.5 release
+ and did a whole bunch of stuff.
+
+ Alan Milligan fixed the SSL support for xmlrpc basic auth, and for
+ 0.6.1 contributed ConnectionMgr to provide yet another transport
+ because xmlrpc is broken and ZPublisher.Client doesn't support SSL.
+ For 0.7, Alan provided big patches to implement push/pull syncing and
+ the "touch" feature.
+
+ Sascha Ottolski contributed a patch to make it easier
+ to add the Sync tab to new classes, and did some work on
+ improving support for ZClass definitions.
+
+ Charlie Reiman helped out a lot during the 0.5 releases.
+
+ Joachim Werner came up with some cool UI suggestions for 0.3, thanks.
+
+--
+
+credits first added by Charlie Reiman, Oct 23, 2002
+
+See LICENSE.txt for copyright and license terms.

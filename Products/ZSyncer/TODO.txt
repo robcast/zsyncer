@@ -1,0 +1,352 @@
+Planned enhancements to ZSyncer should be logged here.
+
+Cleanup / Refactoring:
+
+   Look at factoring out all the conditionals on use_relative_paths.
+   (Since the ZSyncer itself has persistent configuration, this might
+   require moving much of its functionality into a new class that does
+   the actual syncing and which would be instantiated on the fly.)
+
+   Need to audit all remote methods and ensure that they consistently
+   trap the right errors, return meaningful response codes, etc.  And
+   check the local callers for consistency too.  I think it's kind of
+   a hodge-podge now.
+
+   Also clean up the UI to more consistently use StatusMsg and
+   response streaming.  Probably some refactoring to do there.
+
+   In fact, the whole error / response / message-handling system could
+   probably stand to be redone. (See recent threads re. handling of
+   "chunking" - apparently we may be able to remove the size-guessing
+   hacks.)
+
+
+
+TESTING:
+
+   It would be good to refactor the tests so that:
+
+   - A dummy connection type is implemented and used for all zsyncer tests,
+     so none of them make any network requests.
+
+   - The connection type API is explicitly spelled out somewhere
+     e.g. write a formal interface.
+
+   - Tests are written for each connection type, ensuring that they
+     implement the interface properly. These tests *would* make
+     network connections.  (Currently, only ConnectionMgr has any
+     tests and those could use work too.)
+
+BUGS:
+
+ These should be moved to the Sourceforge collector.
+
+ * Many operations that should be transactional are not.
+   e.g. manage_touch makes a separate request for each touched object.
+   If some of them fail, you end up with inconsistent state.  In
+   general, all should succeed or all should fail.  This can be done
+   by making more use of callManyRemote.
+
+ * manage_approvedAction is useless in undo logs since you can't tell
+   what it really did. See if we can improve that.
+
+ * A report of failure on Windows that I have not reproduced: "illegal
+   data at start of file", from Kamal Gill to zope list, from 29 Oct
+   2003.
+
+
+PERFORMANCE ISSUES:
+
+ * Big syncs: Transferring a lot of stuff fails because ZSyncer does
+   everything in memory.  E.g. if I sync a folder containing ~70 MB of
+   stuff, the destination server's ram useage shoots up by 300 MB!!!
+   Note that import of large .zexp's seems to succeed in cases when
+   zsyncer fails.
+
+   This may be somewhat mitigated since we got rid of XML-RPC; should
+   test it again.
+
+   Things are also somewhat better since we switched to using a
+   tempfile instead of StringIO when syncing something larger than
+   Config.upload_threshold_kbytes.  *** Still haven't done this on the
+   client side for uploads***
+
+   Further possible optimization: for pull only: Use a separate thread
+   (or process?)  to build the pickle to a temp file, and send it back
+   in chunks with a content-range with an empty total size.
+
+   For push, there doesn't seem to be anything like content-range for
+   POST.  So I probably have to start uploading after building the
+   whole file.  (One possibility to investigate: connection:
+   keep-alive might help? or not.)  But I can still be nice to the
+   client by using httplib's connection.send(chunk) in a loop and
+   never have to load the whole thing into memory.  (But this has to
+   be implemented per each back-end.) OR - suggested by chris
+   mcdonough - use a PUT request instead, which afaik means the
+   httplib client code doesn't have to fiddle w/ the request much at
+   all - just hand it a file and it behaves sensibly.  (The server is
+   another question... apparently it currently makes multiple copies
+   of the tempfile, see
+   http://mail.zope.org/pipermail/zope-dev/2005-April/024616.html)
+
+
+UI enhancements:
+
+ * Switching syncers while working is clunky. You either have to edit
+   the syncer, which is error-prone, or go out of the current syncer
+   and into another one.  Instead of having a bunch of syncers
+   configured for different destination servers, maybe have one syncer
+   configured with multiple destinations, and in Folders.dtml allow
+   the user to toggle which of the configured destinations are used
+   for comparisons and syncing.
+
+ * Currently with multiple destination servers, only the first one is
+   used for comparisons. This is not very informative.
+
+   Quick solution: If multiple destination servers, allow user to
+   toggle which is used for comparison (without changing the syncer
+   config)
+
+   More extensive solution: provide a combined comparison
+   mode in which each object's status is shown on all destination
+   servers.  The status could then be any of:
+       ok
+       missing
+       out-of-date
+       ok/missing
+       ok/out-of-date
+       missing/out-of-date
+       ok/missing/out-of-date
+
+   alternatively, have a status column for each destination.
+   Or maybe rows within each object's row?
+   This a lot of information - especially with some of the other
+   recent enhancements like showing the mod. time for the destination -
+   now we have to decide WHICH destination to show, or how to show all
+   of them, or whether to show the latest only, etc.
+   Hard to keep the UI from getting cluttered with all this info.
+   The next item might help wit this.
+
+ * status column could contain links to more detailed information,
+   e.g. in the multi-destination case, show the usual comparison
+   for each server in turn. This could also be used to do more
+   expensive comparisons as described below.
+
+ * Write some Help for the manage_sync page.
+
+
+Functional enhancements:
+
+
+ * Config.py should be replaced by extensions to zope.conf.
+   Look into how that's done.
+
+ * Log dir should be configurable in the config file.
+
+ * COMPARISON ENHANCEMENTS
+
+   Motivation:
+
+   - Timestamps give wrong results if the servers do not have closely
+   synced clocks (destination = source +/- network latency), and even
+   then can be misleading.
+
+   - Prevent false out-of-date results: wastes time for the user
+   investigating and/or needlessly syncing.
+
+   - Prevent false OK results: if something is changed directly on the
+   destination server, it will compare "OK", which makes it very
+   likely that emergency patches to a production server will get
+   clobbered unless great care is taken to back-sync them.
+
+   Goals:
+
+   - Comparison code should be pluggable somehow.
+     Default comparison should be enhanced as follows:
+
+   - any difference in DC Metadata -> not equal.
+
+   - any difference in Properties -> not equal.
+
+   - any difference in security settings (permission/role mapping, local
+     roles) -> not equal.
+
+   - for ObjectManagers: comparison should continue to be atomic rather than
+     recursive by default.
+
+     Recursive means that if foo/bar/bat/baz is considered different,
+     then foo, bar, and bat would be considered different even if
+     there are no other differences.  Atomic means that we ignore
+     foo._objects.  Atomic is both easier and cheaper.  Also,
+     recursive would be confusing since you don't know how much of the
+     tree you need to sync to fix the problem.
+
+     A better solution to recursive comparison is already implemented
+     in the UI.
+
+   Ideas for additional comparisons:
+
+   There are many potential comparisons but many are likely to be
+   too expensive for routine recursive use. this should be investigated.
+   One option would be to give the user control over which comparisons
+   are performed.
+
+   - improve timestamp comparison:
+     I don't think this is possible for non-CMF objects,
+     for the reason given below.
+
+     this was my strategy:
+
+     dest_time = remote call to DateTime()
+     local_time = DateTime()
+     fudge_factor = dest_time - local_time
+
+     when comparing times,
+     if dest_modtime <= source_modtime + fudge_factor:
+        status is OK
+
+     PROBLEM: if the clocks on the two systems have changed
+     since dest_modtime or source_modtime, this doesn't work
+     at all. And for hypothetical two-way syncs, it's useless
+     even if the clocks are right.
+
+     Somebody on zope@zope.org suggested that zsyncer should
+     forcefully set the mod time of the source & destination
+     objects so that they match. This is not possible
+     since bobobase_modification_time is database-level and zope
+     can't control it.
+
+   - CMF content is easier since it has real metadata: we can ignore
+     bobobase_modification_time and use the DublinCore modification
+     date as our timestamp. When comparing, we're OK only if they are
+     identical. This should work very reliably. DONE!
+
+   - add a new status ("Changed"? "Newer"?) if the timestamps look ok
+     but other comparisons indicate a difference.  (should this be
+     red, orange, or other color?)
+
+   - compare size - easy and cheap, will catch many differences, but
+     ObjectManagers and many other objects don't support it or might
+     have a different interface for getting it. (get_size vs getSize,
+     maybe others)
+
+   - compare metatype: this always works.  unfortunately it's unlikely
+     that we have 2 different types, but it does happen.  so this is
+     probably only rarely useful as a way to avoid more expensive
+     comparisons.
+
+   - compare all DublinCore metadata if available. Again, mostly
+     useful as a short-circuit; even so, comparing DC modification
+     time should prevent the need for this.
+
+   - simple comparison of the object's "content", whatever that is -
+     e.g. body of a DTML Method. Not useful for all types.
+     Potentially too expensive on the network and not useable for all
+     types - would need to be toggleable. Should only be done after a
+     meta_type check.
+
+   - Checksum: compare some kind of hash or checksum.  Maybe using the
+     md5 module (hash() would be ok but i doubt hashes are guaranteed
+     to be portable).
+
+     This assumes we know *what* we wnat to checksum.
+
+     md5 can take a while to compute for large objects (~ 12 seconds
+     to checksum a 200 MB string on a PIII-866; plus we have to figure
+     the ZODB load time to get the data).  But once computed, these
+     are very small and very likely to give good results.  For
+     proof-of-concept, implement this with md5 and don't worry about
+     speed.
+
+     (premature optimization note: i suspect that to compute checksums
+     fast enough we'll need a small C extension... but only if it's
+     faster than md5.  md5 is probably severe overkill anyway.  Note
+     that gnu sum is quite fast; the algorithm is pretty simple, and i
+     found c code and a python translation for it in a
+     comp.lang.python search for python fast checksum.)
+
+     We have to be careful not to checksum data that will cause
+     otherwise-identical objects to compare inequal: e.g.
+     bobobase_modification_time, and unhashable stuff like references
+     to other objects.
+
+     We want to checksum all interesting aspects that could differ:
+     properties & security settings, DC metadata, CMF workflow
+     state. Some of these may be implemented with dictionaries; how do
+     you checksum a dictionary??  one answer: mylist = mydict.items();
+     mylist.sort(); str(mylist) ... which fails if any of the values
+     are dictionaries or instances...
+
+     Maybe we need some way to configure how to checksum a given
+     meta_type.  e.g. register an adapter object that
+     cooks up some subset of the real object to checksum.
+
+     (premature optimization note 2: if the checksum will take a lot
+     of CPU time to compute due to enormous size of an object, we
+     could do a 2-stage comparison: first do all available metadata;
+     if those come back equal we move on to more expensive stuff.
+     This should be decided by the source zsyncer based on
+     characteristics of the local object, because we want to minimize
+     rpc calls to avoid network delays. The remote comparison should
+     return as soon as it finds a difference.)
+
+     (premature optimization note 3: Might be worthwhile to cache the
+     checksums. The ZSyncer itself could store these in a OOBTree. The
+     keys would be paths (relative to the syncer?). Each leaf would
+     contain something like (bobobase_modification_time,
+     security_checksum, properties_checksum, dc_metadata_checksum,
+     content_checksum). If any of those cannot be computed, it's None.
+     The destination server, when asked to compare an object, would do
+     something like:
+
+     if (not cache.has_key(obj_path)) or \
+        cache(obj_path)[0] < obj.bobobase_modification_time:
+         compute the tuple and cache it
+         return the tuple
+
+     The source ZSyncer could then just compare each checksum
+     optionally falling back to other comparisons.
+     )
+
+ * recursive sync: a new (toggleable) sync mode, in which zsyncer
+   tries to walk down the tree and automagically do the right thing
+   depending on status: sync only missing or out-of-date things (don't
+   try to descend into missing folders, just sync them).  This could
+   leave some out-of-sync objects if the comparisons are wrong, but it
+   could also be a big win when syncing a few scattered changes in a
+   huge folder tree.  Result should report only the items that were
+   actually synced.
+
+   There should always be a confirmation page in this mode, that shows
+   you what would be synced and allows deselecting items.
+
+   Hmm, this is not really necessary if I just fix the filtering in
+   recursive comparison mode.
+
+ * Aspect-based syncing:
+   Currently, sync is all-or-nothing.  What if you have a 200 MB file
+   and change its permissions, or its properties, or its CMF metadata?
+   You have to sync the whole thing.  Worse, what if you have a huge
+   portal_skins folder, with some stuff you don't want to sync yet,
+   but there are changes to the skin paths (properties) that you need
+   to sync ASAP?  Another use case: Access Rule settings on a folder.
+
+   This is not a YAGNI - I have needed it for months :-)
+
+   one problem is making this extensible to handle more features, e.g.
+   custom products.
+   maybe just register the attributes that are considered "content".
+
+   The new _callRemote() method is intended to be useful here.
+
+ * "Unsyncable": it should be possible to flag an object (not just a
+   meta_type) as unsyncable. On the source, this would disallow
+   syncing it; on the destination, this would disallow
+   manage_deleteRemote.  (OK, that's really 2 flags.) The UI should
+   tell who marked it, when, & why.  The rationale is similar to the
+   "immutable" bit in unix. The syncer itself could store these as an
+   OOBTree whose items are path: flag. This could get stale if objects
+   move. Or, set properties on objects, like zsyncer_unsyncable
+   (boolean); but that might annoy people, and requires the object to
+   implement PropertyManager.  TANSTAAFL.
+

@@ -1,0 +1,30 @@
+<div metal:use-macro="context/main_template/macros/master">
+
+<div metal:fill-slot="main">
+ <span tal:define="synctool context/portal_zsyncer;
+                  all_syncers python:synctool.objectIds('ZSyncer');
+                  syncer_name python:context.REQUEST.get('syncer', None);
+                  syncer python:synctool.getZSyncer(syncer_name);
+		  sync_obj_path python:synctool.getPath(context);
+                  result python:synctool.getDiff(sync_obj_path, syncer_name);
+                  diff python:result.get('diff');
+                  local_src python:result.get('source');
+                  remote_src python:result.get('dest');
+                  error python:result.get('error');
+">
+
+  <h1>Differences in
+
+   <i tal:content="context/portal_type"> Document </i>
+   <span tal:replace="sync_obj_path">
+    /foo/bar/bat/baz </span>:
+  </h1>
+
+
+   <div  metal:use-macro="syncer/manage_diff/macros/diff_macro">
+      Diff info goes here.
+   </div>
+
+ </span>
+</div>
+</div>

@@ -1,0 +1,80 @@
+<div metal:use-macro="context/main_template/macros/master">
+
+<div metal:fill-slot="main">
+ <span tal:define="sync_tool context/portal_zsyncer;
+                   all_syncers python:sync_tool.objectIds('ZSyncer');
+                   syncer_name python:context.REQUEST.get('syncer', None);
+                   syncer python:sync_tool.getZSyncer(syncer_name);
+                   sync_obj_path python:sync_tool.getPath(context);
+                   obj_and_children_info python:sync_tool.getStatus(sync_obj_path, syncer_name);
+                   obj_info python:obj_and_children_info[0];
+">
+
+<h3>Sync Status of
+
+  <img tal:attributes="src obj_info/icon" />
+  <i tal:content="obj_info/meta_type"> Document </i>
+  <span tal:replace="obj_info/relative_path"> 
+    /foo/bar/bat/baz
+  </span>:
+  <img tal:attributes="src obj_info/status_icon" />
+  <b style="color: green"
+      tal:attributes="style string:color: ${obj_info/status_color}"
+      tal:content="obj_info/status">
+     OK
+  </b>
+
+</h3>
+
+
+ <p> Last Modified - <i>Local</i>:
+     <span tal:replace="obj_info/src_best_modtime">
+       date here
+     </span>;
+     <i>Remote</i>:
+     <span tal:replace="python:obj_info['dest_best_modtime'] or default">
+       n/a
+     </span>
+ </p>
+
+ <form method="POST" action=""
+  tal:attributes="action context/absolute_url">
+
+  <input type="hidden" name="came_from"
+   tal:attributes="value request/URL" />
+
+  <input type="hidden" name="obj_paths:list" value=""
+   tal:attributes="value sync_obj_path" />
+
+  <input type="hidden" name="syncer_name" value=""
+   tal:attributes="value syncer_name" />
+
+
+  <p>
+   <input type="submit" name="zsyncer_sync:method" 
+    value=" Sync " />
+   <input type="submit" name="zsyncer_delete:method" 
+    value="Delete" />
+  </p>
+
+
+  <ul>Destination servers:
+
+    <li tal:repeat="destination syncer/dest_servers"
+        tal:content="destination" > server1 </li>
+
+    <li tal:replace="nothing"> server2 </li>
+  </ul>
+
+ <p tal:condition="python:len(all_syncers) > 1"> Using syncer: 
+      <span tal:replace="syncer/title_or_id"> foo </span>
+ </p>
+
+ </form>
+
+
+ </span>
+
+</div>
+</div>
+

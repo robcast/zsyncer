@@ -1,0 +1,43 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML lang="en">
+<HEAD>
+<TITLE>Approval</TITLE>
+</HEAD>
+<dtml-var manage_tabs>
+<dtml-let action="REQUEST.get('manage_approval')">
+<form action="manage_approvedAction" method="POST">
+
+<input type="hidden" name="action:string" value="&dtml-action;">
+
+<dtml-in object_paths>
+<input type="hidden" name="object_paths:list" value="&dtml-sequence-item;">
+</dtml-in>
+<input type="hidden" name="folder:string" value="&dtml-folder;">
+<p>
+<b>Action:</b> &dtml-action;<br />
+<b>Object(s):</b> <dtml-in object_paths>&dtml-sequence-item;<dtml-unless sequence-end>, </dtml-unless></dtml-in>
+</p>
+
+<table border="0" cellpadding="2">
+    <tr>
+        <td>Person syncing:</td>
+        <td><input type="string" name="syncer:string" value="<dtml-var "REQUEST['AUTHENTICATED_USER']">"></td>
+    </tr>
+    <tr>
+        <td>Approval by:</td>
+        <td><input type="string" name="approver:string" value=""></td>
+    </tr>
+    <tr>
+        <td>Comments:</td>
+        <td><textarea name="comments:string" rows="5" cols="20"></textarea></td>
+    </tr>
+    <tr>
+        <td>&nbsp;</td>
+        <td><input type="submit" name="submit" value="Approve"></td>
+    </tr>
+</table>
+</form>
+</dtml-let>
+
+</BODY>
+</HTML>

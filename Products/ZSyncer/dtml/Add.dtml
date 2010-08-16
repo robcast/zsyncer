@@ -1,0 +1,21 @@
+<dtml-var manage_page_header>
+		<h3>Add ZSyncer Instance</h3>
+		<form action="manage_addZSyncer" method="POST">
+			<table cellspacing="2">
+				<tr>
+					<td align="LEFT" valign="TOP" class="form-label">Id:</td>
+					<td align="LEFT" valign="TOP"><input type="TEXT" name="id" size="30"></td>
+				</tr>
+				<tr>
+				<tr>
+					<td align="LEFT" valign="TOP" class="form-label">Title:</td>
+					<td><input type="TEXT" name="title" size="30"></td>
+				</tr>
+				<tr>
+					<td>&nbsp;</td>
+					<td><br><input type="SUBMIT" value=" Add "></td>
+				</tr>
+			</table>
+		</form>
+<dtml-var manage_page_footer>
+

@@ -1,0 +1,420 @@
+Version 0.7.1 (2005/04/10):
+
+ Bugs fixed:
+
+ - No more warning about "ambiguous name for method" on startup.
+
+Version 0.7.1-beta1 (2005/12/22)
+
+ Bugs fixed:
+
+ - Output message colorization was not working in the ZMI UI.
+
+ - Simplified handling of output messages to use HTTP 1.1 chunking
+   instead of guesstimating the size of output to write. This gives
+   considerably simpler code.
+
+   Doesn't seem to stream behind Apache / mod_rewrite, but neither did
+   the old version. But at least you get all the output at once when
+   it's done.
+
+ - Improved breadcrumbs in ZMI UI: We now include the syncer root
+   object as a clickable link. (It was there before, but not
+   always visible.)
+
+Version 0.7.0-final (2005/12/15)
+
+ Features added:
+
+ - New methods of ZSyncer:  callManyRemote()
+   (moved from ZSyncerTool), and callMethods_() which
+   allows callManyRemote() to make only one request.
+   This is faster than the old implementation, and
+   transactional.
+
+   The plan is to use these to refactor some of the old methods that
+   use several requests for no good reason. This refactoring will be
+   done later in the 0.7 series.  Hopefully remove some methods,
+   too. No more new server-side methods will be added before 0.8, so
+   hopefully when upgrading from 0.7 to 0.7.n, you will only have to
+   upgrade on the source server, not necessarily all the destinations.
+
+ - callManyRemote(), callRemote(), callMethod_(), and callMethods_()
+   all now allow you to omit the 'path' argument or pass None for it,
+   which results in calling methods directly on the remote syncer
+   itself.
+
+ Bugs fixed:
+
+ - Logging now is correctly relative to $INSTANCE_HOME.  If your
+   ZSyncer configuration includes a complete path to the log file, and
+   it logs in $INSTANCE_HOME/log/ (which is the default), you should
+   update your ZSyncer instance(s) by removing the $INSTANCE_HOME part
+   of the path.  For example, if your $INSTANCE_HOME is
+   /var/www/myZope, and your ZSyncer configuration has the logfile at
+   "/var/www/myZope/logs/ZSyncer.log", you should change that to
+   "log/ZSyncer.log".
+
+   This is important if you run multiple ZEO clients on one machine
+   and want them to log to different files, or if you change the path
+   to your $INSTANCE_HOME. Before the bugfix, you'd have problems with
+   either of those scenarios.
+
+Version 0.7.0-beta2 (2005/10/20)
+
+ - Checked in a pretty complete, working zsyncer_folderview.
+
+ - getStatus() now takes an arg to toggle recursion.
+
+ - made is_diffable() private and made it check status, and added its
+   output to the manage_compare() dicts, so templates no longer need
+   to call it, they can just ask the dict.
+
+ - new method of ZSyncerTool: callManyRemote()
+   to call multiple methods on the remote system and return a list
+   of results.  Very not optimized.
+
+ - added Delete to ZSyncerTool skins.
+
+ - ZSyncerTool actions now include ${object_url}.
+   This is prevents problems with relative URLs, e.g. if the skin templates
+   do something funny to base href.
+
+ - Added output of getPathInfo() to _getInfoForObject().
+   This means templates no longer have to call getPathInfo()
+   explicitly, it's already in manage_listObjects() output.
+
+ - added public method ZSyncerTool.getZSyncer(),
+   which skins now use instead of treating the tool as a mapping.
+   This allows skins to not know about the default syncer name.
+
+ - SyncFolder.zpt links fixed when the syncer(s) are not in the zope root
+   and don't have a path explicitly set.
+   (sourceforge bug 1325930)
+
+
+Version 0.7.0-beta1 (2005/10/14):
+
+ - Should work with Zope 2.8 now!
+ - The (broken) XMLRPC code has been removed.
+ - Began incrementally migrating ZMI pages to ZPT instead of DTML,
+   as things become too painful to maintain. Migrated so far:
+     dtml/SyncFolder.dtml -> www/SyncFolder.zpt
+     dtml/Diff.dtml -> www/Diff.zpt
+ - Some functions and helper classes from ZSyncer.py moved to
+   new module, utils.py. (Tests added for these.)
+ - New config variable, "upload_threshold_kbytes", determines the
+   point at which the server spools data to a temp file instead of
+   RAM. (would be nice if we could re-use one of the temp files
+   already created by zserver, but those are not available to app code afaik.)
+ - ZSyncerTool.py is now actually working.
+   Methods now have security declarations.
+   We now have lots of unit tests for it, which all pass.
+   Actions are starting to be sensible.
+   Example skins (for CMFDefault) are getting to be usable,
+   if still missing many features of the ZMI UI.
+ - manage_compare now tolerates lack of REQUEST.
+ - "delete" now deletes from both local and remote, thanks to Alan.
+ - Merged push/pull syncing and the "touch" feature from 
+   bastion_branch, thanks Alan!
+ - various tweaks and fixes to Alan's patch.
+ - Added many unit tests.
+ - response pickles now use protocol 1 (more efficient than the
+   default 0).
+ - The "override user" stuff is removed from the UI.
+   You now have to use the proto://user:passwd@server
+   url format. (merged and modified from bastion_branch).
+   This allows ZSyncer to use different auth information
+   to authenticate to each remote system.
+   (**Warning:** you get plaintext passwords in the ZSyncer properties
+   page. Be careful that only trusted administrators have "View
+   management screens" permission on that page!
+
+ - added security declaration to call_().
+ - made Dieter's code more readable.
+ - replaced print statements in ConnectionMgr with 
+   conditional writes to stderr.
+ - SSL connections using ConnectionMgr should now set timeout
+   properly.
+ - fixed performance buglet: when syncing to multiple destinations,
+   we now compute the pickle once, rather than once for each
+   destination server.
+ - more patches to improve ZClasses support.
+ - fix to ordering support: avoid trying to order children of a BTreeFolder
+   (or any subclass of BTreeFolder)
+
+Version 0.6.2:
+
+ - added File as one of the default diffable types (SF "bug" 1109156).
+ - added BTreeFolder2Base to the default classes with a sync tab.
+ - added javascript confirmation to the delete link for extra objects.
+   Note that SF #1053812 describes a better (but more work to implement)
+   solution.
+
+Version 0.6.1 final:
+
+ - we now provide an upgrade method if you're using 0.5.1 or
+   earlier. See README.txt.
+ - no more deprecation warning when using CMF 1.5.0
+ - some comments to _normalize_time, i attempted to make
+   the timezone configurable but it's not obvious how i could. 
+ - Fix to the previous fix since there is no such function
+   as Acquisition.aq_explicit(). whoops.
+ - Fix support for Archetypes' OrderedBaseFolder
+   (apparently only used if running Archetypes on zope < 2.7)
+
+Version 0.6.1-beta2:
+
+ - Clear DAV locks from synced items on the destination.
+   Fixes SF bug 988027.
+
+Version 0.6.1-beta1:
+
+ - ZSyncerTool actions are now not visible by default.
+ - timeout is now configurable in Config.py (at least for ConnectionMgr)
+ - re-added connection type info to ZSyncer.stx,
+   and cleaned it up a bit.
+ - no longer import names from Config, just import Config.
+ - integrating ConnectionMgr.py patch from Alan Milligan,
+   to provide an alternative connection mechanism that works with SSL.
+ - added Alan's test framework. I really need to write some freakin'
+   tests.
+ - _log() no longer needs time argument.
+ - log exceptions for all 'XXX except what?' comments
+ - sf bug 1065062: tolerate lack of absolute_url_path in zope 2.6 or lower.
+ - removed connection type info from ZSyncer.stx
+
+Version 0.6.0:
+
+ This new features release is NOT BACKWARDS COMPATIBLE with versions
+ 0.5.1 or earlier.
+ You must upgrade ZSyncer on *all* servers that will sync to 
+ each other.  You will probably have to reconfigure your ZSyncers too,
+ and check your users' permissions since we changed the permission name.
+
+ - minor fixes in Folder.dtml: slightly too long paths in recursive mode.
+ - fix from sbrauer to error previous ordered folder support patch.
+ - xml-rpc disabled until we either fix or remove it
+
+Version 0.6.0-beta3:
+
+ - slight improvements to help/ZSyncer.stx.
+ - sf bug 1050115: fixed NameError on diff.
+ - sf bug 1046494: fixed broken delete links in Folder.dtml.
+ - sf bug 1045682: changed IntType to types.IntType.
+ - sf bug 1044687: add_syncable was ignored by Edit.dtml.
+ - sf bug 1043112: changed constructor name was out of date in add.dtml.
+ - sf bug 1044766: syncing an ordered folder preserves order,
+   patch contributed by sbrauer.
+ - sf bug 1044766: added ability to blacklist meta-types,
+   not just whitelist, patch contributed by sbrauer.
+ - More whitespace fixes, no more tabs in Zsyncer.py.
+ - changed Folder.dtml links to objects' manage_main to
+   manage_workspace instead. Should be what the user wants (some
+   objects don't have manage_main).
+
+Version 0.6.0-beta2:
+
+ - ZSyncerTool at least installs correctly now, even if it doesn't
+   actually work yet ;-)  But a little attention will get it there.
+ - fixed bug in beta1: Add.dtml called wrong constructor.
+ - changed permission name to "ZSyncer: Use ZSyncer" to be
+   consistent with the usual idiom.
+   This is intended to be used for remotely twiddling configuration,
+   properties, and the like.
+ - added _callRemote which allows you to do just about anything
+   on the remote server with security checks.
+ - some docstring whitespace normalization
+ - normalized order of args to _*Remote()
+ - removed some arg defaults where it would be an error to not
+   provide them:  _exportRemote, _srcRemote
+ - getURLpath replaced with the simpler getPath.
+
+Version 0.6.0-beta1:
+ - fixed Folder.dtml for relative paths, syncers in different places.
+ - better handling and formatting of diff errors
+ - added description of relative mode to README.txt and to the help file.
+ - remamed manage_addServer* to manage_addZSyncer*, since
+   that's what they do :-)
+ - changed signature of manage_replaceObject (nee manage_addRemote):
+   obj_path is now first argument, followed by data; 
+   removed the add_in argument because we can toggle that based
+   on whether data is None.
+ - manage_addRemote renamed to manage_replaceObject.
+   because it adds an object *locally*, not remotely,
+   and in fact it unconditionally deletes but only sometimes adds!
+ - manage_srcRemote renamed to manage_getSource, becaues it
+   actualy gets the *local* source. 
+ - renamed manage_exportRemote to manage_pushToRemote
+ - added getFirstDestination() to encapsulate getting a server
+   for comparisons, diffs, etc.
+ - added ZSyncerConfigError to signal that your config is broken.
+ - removed _isSyncable, now just check self.syncable directly.
+ - removed getSyncable which has been deprecated since 0.4.
+ - renamed dest_server to dest_servers
+ - Improved error messages when comparisons fail, see
+   getErrorAdvice().
+ - removed NotImplemented, it's a builtin, duh.
+ - fixed bad relative paths to Manage and View.
+ - UI: removed extraneous size for Extra items.
+ - now use PropertyManager API for storing configuration.
+   Some now-redundant methods removed.
+ - fixed typo in _exportRemote that caused apparent hang on sync.
+ - added keyword arg support to dieter's ZPublisher.Client stuff.
+ - added README note about possible backward incompatibility.
+ - changed some misleading "object" arguments to "object_id" or 
+   "object_ids" as appropriate.
+ - removed incorrect logfile description on Edit.dtml
+ - now check against types.FooType instead of type(Foo).
+ - now use string methods instead of string module.
+ - It's now possible to use paths relative to zsyncer placement.
+   This allows you to A) use a different absolute path between
+   source and target servers, and B) prevent users from syncing
+   anything above the folder where the syncer lives.
+ - added some more reserved names
+ - some cleanup of whitespace and comments.
+ - We now use RESPONSE.write() to stream output messages.
+   The old method of RESPONSE.redirect() frequently failed if you
+   synced too many objects (query string got too long).
+ - No more html in the syncer log!
+ - re-named all fooXMLRPC methods to fooRemote... names
+   were misleading now that xml-rpc is not the only connection type.
+   xml-rpc is an implementation detail.
+ - Display now shows local size if available
+ - Display now says "Object" instead of "File"
+ - Time now shown somewhat like ls -l (i.e. show year if old, hour/minute
+   if current year). Show in the source zsyncer's localtime,
+   not GMT.
+ - Merged Sascha Ottolski's patch to make it easier to
+   add Sync tab to classes.  Refactored to put them in Config.py.
+ - Merged Dieter Maurer's patch to use ZPublisher.Client and
+   cPickle instead of xmlrpc. May help with mixed-encoding data.
+   This should improve speed and memory performance too,
+   since we don't have to do base64 encoding / decoding
+   of the pickles.
+ - Made connection type configurable. Default is now ZPublisher.Client.
+ - Cleaned up lines > 80 chars.
+ - Cleaned up Config.py a bit
+ - Added module docstrings to all modules
+
+Version 0.5.1:
+
+ Bugfix release.
+
+ - Fixed obnoxious "KeyError: mode" problem when clicking the "Sync"
+   tab from ZMI. Aargh! I had addressed it in Sync.dtml but needed the same
+   fix in SyncFolder.dtml. I failed to notice it was still broken,
+   because it only occurred when you have just 1 zsyncer instance, and
+   my usual work environment has several.
+ - Fixed recursive-comparison filtering.
+ - Fixed recursive-comparison sorting.
+ - Sync page now shows the syncer title. Useful when there are
+   multiple syncers.
+
+Version 0.5:
+
+ Sorry folks, we have completely blown the "release early and often" 
+ philosophy :-[ Many of these changes are nearly a year old.
+
+ - TODO: added a ton of ideas. Comments welcome.
+ - Added ZSyncerTool.py for CMF, by Andy McKay. There is no UI yet,
+   write your own :-)  Largely untested.
+ - Fixed import problems with ZSyncerTool. 
+ - Copied skins/icon.gif to root since ToolInit is dumb about that.
+ - Fixed html_quoting problem with Zope 2.6.
+ - Added icon.gif to www.
+ - Removed icon.gif from www since we don't use it :-)
+ - Added license.txt. BSD-style, as agreed by other contributors.
+ - Added credits.txt.
+ - Added version.txt.
+ - Added refresh.txt, then deleted it again :-) products that 
+   use monkey-patching are problematic with refresh.
+ - Folder.dtml: Added "Toggle". 
+ - Folder.dtml: fixed column header ordering.
+ - Folder.dtml: Added remote modification time column. 
+ - Folder.dtml: Color-coded the key at bottom.
+ - ZSyncer.py / Edit.dtml: Added Dieter's patch to support cmf tools in the 
+     syncable types list.
+ - ZSyncer.py: Fixed incorrect normalization of urls on windows (don't use
+     os.path.normpath for that!)
+ - ZSyncer.py: Added a bit of zlog blather.
+ - ZSyncer.py, Folder.dtml: Added toggleable recursive comparison mode - 
+     descends into all sub-folders (and folderish items) and shows all 
+     comparison results in the tree, with relative path shown instead of id.
+     (BUG: toggles for statuses to show don't work - you get everything.)
+ - ZSyncer.py: Removed debugging print from manage_listObjects.
+ - ZSyncer.py: manage_compare(folder) changed to manage_compare(path), 
+     now works with non-folderish items (result is a sequence with length 1). 
+     This is expected to be useful in CMF.
+ - ZSyncer.py: Changed to new-style security declarations.
+ - ZSyncer.py: Modification time now uses DublinCore timestamp when 
+     available, and requires it to match exactly for OK status. 
+     (If not available, fall back to old behavior: use bobobase time 
+     and assume equal or later destination modtime is OK.)
+ - ZSyncer.py: Colorized the sync-result messages.
+ - ZSyncer.py, Config.py: Method names used for diffing are now configurable 
+     per-type in Config.py.
+ - ZSyncer.py: Refactored and replaced some of the internal methods.
+ - ZSyncer.py: Added "Use ZSyncer" permission for methods that change things.
+ - ZSyncer.py, Config.py: Moved status descriptions to Config.py.
+ - Config.py: Added 'Page Template' to Config.py's defaults and as 
+     a diffable type.
+ - Config.py: Added 'Document' (from CMFDefault) and 'TextElement'
+     (from CMFArticle) to diffable types.
+ - SyncFolder.dtml: Added stylesheet reference.
+ - help/ZSyncer.stx: Added notes about ZEO and multiple destinations to help.
+
+Version 0.4.6:
+- Made the filter optional, helps for things like CMF
+- xmlrpclib fix for 2.6
+
+Version 0.4.5:
+-  Removed title_or_id from the properties of the objects synced so that objects with non ASCII characters in the title dont fail...
+-  Change all dates to GMT
+-  Uploaded to Sourceforge
+
+Version 0.4.4:
+-  Correctly set manage_sync form to view management screens permission
+-  Fix HTTPS host header for multiple hosts...
+
+Version 0.4.3:
+-   Patch from John Zinti, so https urls arent munged by
+    the products.
+
+Version 0.4.2:
+-   Bugger, didnt get all the references to folder
+-   Manage/View dont show up on extra objects
+-   Approval didnt pass through REQUEST correctly
+
+Version 0.4.1:
+-   Fixed DTML bugs, esp. in SyncFolder.dtml
+-   Add Image and File to default syncable objects
+
+Version 0.4:
+-   HTTPS support thanks to peter.brandstrom@appload.net, thanks Peter
+-   Moved some things into the config
+-   Won't crash on broken objects
+-   HTML fixes
+-   Folder patch to add in "Sync" tab
+-   Won't sync reserved objects (eg standard_html_header)
+-   New icon
+-   Syncable types *** warning *** please read the help on this, it
+means you can sort of limits the types sycned.
+-   Help updated
+
+Version 0.3:
+
+-	Added icons into ZMI
+-	You can now rummage through all objects with isPrincipiaFolderish = 1,
+-	You can sync multiple objects at once. Changed sync link to checkbox.
+-	Fixed bug in deleting object
+-	After syncing ZMI returns you to the folder you left from
+-	You can override the user you sync with, select override and add a 
+username and password. This means the user accounts can be different
+between source and destination boxes.
+-	You can specify your own log file
+-	Changed the icon
+-	Changed all references of production to destination
+-	Changed all references of development to source
+-	Changed all instances of unrestrictedTraverse to restrictedTraverse, 
+will make security a little better.
