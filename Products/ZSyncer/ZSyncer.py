@@ -44,13 +44,7 @@ from App.class_init import InitializeClass
 from OFS.Traversable import NotFound
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 
-try:
-    # Zope >= 2.12
-    from webdav.interfaces import IWriteLock as WriteLockInterface
-except ImportError:
-    # Zope <= 2.11
-    from webdav.WriteLockInterface import WriteLockInterface
-
+from webdav.interfaces import IWriteLock
 
 # Imports for rpc using ZPublisher.Client.
 from cPickle import loads, dumps
@@ -632,7 +626,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 if locked_paths:
                     logger.debug('clearing DAV locks from %s\n', locked_paths)
                     lockmanager.unlockObjects(paths=locked_paths)
-            elif WriteLockInterface in aq_base(new_obj).__implements__:
+            elif IWriteLock.providedBy(aq_base(new_obj)):
                 new_obj.wl_clearLocks()
         if self.strip_talkback_comments:
             logger.debug('manage_replaceObject deleting coments under%s\n',
