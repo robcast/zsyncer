@@ -17,8 +17,8 @@
     <ul>
       <li tal:repeat="syncer syncers">
          <a href=""
-            tal:attributes="href syncer/url"
-            tal:content="syncer/syncer/title_or_id"> The ZSyncer </a> 
+            tal:attributes="href python:syncer['url']"
+            tal:content="python:syncer['syncer'].title_or_id()"> The ZSyncer </a> 
       </li>
     </ul>
  </div>

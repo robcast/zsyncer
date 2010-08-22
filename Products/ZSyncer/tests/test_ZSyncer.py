@@ -1372,7 +1372,12 @@ class TestUIFunctional(RemoteSetUp, ZSyncerSetUp,
         # allowing to select them.
         manage_addZSyncer(self.app, 'another_zs')
         response2 = self.publish(url, self.basic_auth)
-        self.assertEqual(response2.getStatus(), 200)
+        status = response2.getStatus()
+        if status!=200:
+            raise AssertionError(
+                'Return code %s, 200 expected. Output:\n%s' %(
+                    status,response2
+                    ))
         expected_urls = utils.listSyncers(self.app)
         for url in expected_urls:
             self.failUnless(response2.getBody().count(url['url'])
