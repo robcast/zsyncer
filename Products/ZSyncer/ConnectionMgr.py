@@ -15,7 +15,8 @@
 #    in the spirit of the GPL.
 #
 from time import time
-from httplib import HTTPConnection, HTTPSConnection, FakeSocket, _CS_IDLE
+from httplib import HTTPConnection, HTTPSConnection, _CS_IDLE
+from ssl import wrap_socket
 from urllib import urlencode
 import cPickle, re, sys, traceback, socket, base64
 from threading import Lock
@@ -93,8 +94,7 @@ def https_connect(self):
         _debug_print(self, "could not set socket timeout to %s"
                      % Config.timeout)
     sock.connect((self.host, self.port))
-    ssl = socket.ssl(sock, self.key_file, self.cert_file)
-    self.sock = FakeSocket(sock, ssl)
+    self.sock = wrap_socket(sock, self.key_file, self.cert_file)
 
 
 # MonkeyPatch HTTPConnection and HTTPSConnection to
