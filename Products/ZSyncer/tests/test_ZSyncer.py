@@ -16,8 +16,6 @@ import time
 import types
 
 # ZopeTestCase imports and setup.
-if __name__ == '__main__':
-    execfile(os.path.join(sys.path[0], 'framework.py'))
 from Testing import ZopeTestCase
 from Testing.ZopeTestCase import transaction, user_name, user_password
 ZopeTestCase.installProduct('ZSyncer')
@@ -1390,6 +1388,3 @@ def test_suite():
     suite.addTest(makeSuite(TestRemoteAcquisition))
     suite.addTest(makeSuite(TestUIFunctional))
     return suite
-
-if __name__ == '__main__':
-    framework()
