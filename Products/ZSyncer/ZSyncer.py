@@ -37,8 +37,10 @@ from AccessControl import ClassSecurityInfo
 from AccessControl import Unauthorized
 from Acquisition import aq_parent, aq_inner, aq_base
 from DateTime import DateTime
-from Globals import DTMLFile, MessageDialog, Persistent, INSTANCE_HOME
-from Globals import InitializeClass
+from App.special_dtml import DTMLFile
+from App.Dialogs import MessageDialog
+from Persistence import Persistent
+from App.class_init import InitializeClass
 from OFS.Traversable import NotFound
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 

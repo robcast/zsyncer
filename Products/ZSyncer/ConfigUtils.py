@@ -2,7 +2,7 @@
 Utils to help with global configuration of your ZSyncer installation.
 """
 import sys, types
-from Globals import DTMLFile
+from App.special_dtml import DTMLFile
 from Products.PageTemplates.PageTemplateFile import PageTemplateFile
 
 import logging

@@ -1,5 +1,5 @@
 # Zope imports.
-from Globals import ImageFile
+from App.ImageFile import ImageFile
 from AccessControl import ModuleSecurityInfo
 
 # Custom imports.
