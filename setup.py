@@ -1,26 +1,27 @@
-# Copyright (c) 2008-2009 Simplistix Ltd
+# Copyright (c) 2004 Paul M. Winkler and contributors.
+# Portions copyright (c) 2010 Simplistix Ltd.
 # See license.txt for license details.
 
 import os
-from setuptools import setup
+from setuptools import setup,find_packages
 
-package_name = 'errorhandler'
 base_dir = os.path.dirname(__file__)
 
 setup(
-    name=package_name,
-    version=file(os.path.join(base_dir,package_name,'version.txt')).read().strip(),
-    author='Chris Withers',
+    name='Products.ZSyncer',
+    version='1.0dev',
+    author='Paul M. Winkler, Chris Withers',
     author_email='chris@simplistix.co.uk',
-    license='MIT',
-    description="A logging framework handler that tracks when messages above a certain level have been logged.",
+    description="ZSyncer is a Zope 2 product that allows you to synchronize and compare objects from one zope (source) to another (destination)",
     long_description=open(os.path.join(base_dir,'docs','description.txt')).read(),
-    url='http://www.simplistix.co.uk/software/python/errorhandler',
+    url='http://pypi.python.org/pypi/Products.ZSyncer',
     classifiers=[
     'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
-    'License :: OSI Approved :: MIT License',
     ],    
-    packages=[package_name],
+    packages=find_packages(),
     zip_safe=False,
+    install_requires = (
+        'Zope2',
+        ),
     )
