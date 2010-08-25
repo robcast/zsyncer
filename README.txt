@@ -1,9 +1,9 @@
-============
-ErrorHandler
-============
+=======
+ZSyncer
+=======
 
 For full documentation please see:
-http://www.simplistix.co.uk/software/python/errorhandler
+http://packages.python.org/Products.ZSyncer
 
 If working offline, please consult the documentation source in the
 `docs` directory.
@@ -11,5 +11,4 @@ If working offline, please consult the documentation source in the
 Licensing
 =========
 
-Copyright (c) 2008-2009 Simplistix Ltd
 See docs/license.txt for details.

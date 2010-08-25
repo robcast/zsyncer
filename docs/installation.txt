@@ -1,9 +1,18 @@
 Installation Instructions
 =========================
 
-The easyiest way to install ErrorHandler is::
+The easyiest way to install ZSyncer is to specify ``Products.ZSyncer`` as a
+required egg in whatever buildout recipe you're using to manage your
+Zope instance.
 
-  easy_install errorhandler
+Be sure that you can make HTTP connections from the source server to
+the destination server (and the Zope port). ZSyncer cannot work
+without this. Command-line http clients such as lynx or wget may be
+helpful for testing the connection.
 
-Or, if you're using `zc.buildout`, just specify ``errorhandler`` as a
-required egg. 
+It is highly advisable to be sure that the system clock on all your
+servers are synchronized or at least very close.  On Unix, using
+NTP may be a very good idea.
+
+This version of ZSyncer is targetted only at Zope 2.12 and above.
+It is not expected to work with prior versions.

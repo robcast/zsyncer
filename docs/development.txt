@@ -14,8 +14,12 @@ All development requires that you run the buildout::
   $ python bootstrap.py
   $ bin/buildout
 
-Running the tests
------------------
+Unit Tests
+----------
+
+ZSyncer provides unit tests in the tests/ subdirectory.
+Actually many of them are integration tests. Let's not argue
+about that...
 
 Once you have a buildout, the tests can be run as follows::
 
@@ -25,7 +29,7 @@ Building the documentation
 --------------------------
 
 The Sphinx documentation is built by doing the following from the
-directory containg setup.py::
+directory containing setup.py::
 
   $ cd docs
   $ make html

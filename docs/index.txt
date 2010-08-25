@@ -1,14 +1,15 @@
-ErrorHandler documentation
-==========================
+ZSyncer documentation
+=====================
 
 .. toctree::
    :maxdepth: 2
 
    installation.txt
    use.txt
-   api.txt
    development.txt
+   todo.txt
    changes.txt
+   credits.txt
    license.txt
 
 Indices and tables
