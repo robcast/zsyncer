@@ -73,9 +73,7 @@
                     <td>&nbsp;</td>
                 </tr>
                 <tr>
-                    <td align="RIGHT" valign="TOP" class="form-label">Log file:</td>
-                    <td align="LEFT" valign="CENTER"><input type="TEXT" name="logfile" size="50" value="<dtml-var logfile>"></td>
-                    <td>&nbsp;</td>
+                    <td colspan="3"><hr size="1">
                 </tr>
                 <tr>
                     <td align="RIGHT" valign="TOP" class="form-label">Confirmation required?</td>

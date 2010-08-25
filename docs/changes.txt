@@ -13,6 +13,8 @@ Version 1.0.0 (xx yyy zzzz)
 
 - Converted documentation to Sphinx docs.
 
+- Send all logging to the python logging framework.
+
 Version 0.7.2
 -------------
 

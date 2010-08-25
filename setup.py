@@ -24,4 +24,9 @@ setup(
     install_requires = (
         'Zope2',
         ),
+    extras_require=dict(
+        test=[
+            'testfixtures',
+            ],
+        )
     )

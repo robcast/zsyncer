@@ -15,6 +15,9 @@ import sys
 import time
 import types
 
+from testfixtures import compare, Comparison as C
+from testfixtures import log_capture
+
 # ZopeTestCase imports and setup.
 from Testing import ZopeTestCase
 from Testing.ZopeTestCase import transaction, user_name, user_password
@@ -591,36 +594,47 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
         self.failUnless(type(t) is types.StringType)
         # XXX this is a stub test, flesh it out!
 
-    def test_log(self):
-        fpath = os.path.join(os.getcwd(), 'test_log_output')
+    @log_capture()
+    def test_log(self,log):
+        messages = ['yes', 'we', 'have', 'no', 'cheese']
+        self.zs1.log = True
+        self.zs1._log(messages)
+        another = 'yet another message'
+        self.zs1._log(another)
+        log.check(
+            ('event.ZSyncer', 'INFO', "['yes', 'we', 'have', 'no', 'cheese']"),
+            ('event.ZSyncer', 'INFO', 'yet another message')
+            )
+
+    @log_capture()
+    def test_no_log(self,log):
+        messages = ['yes', 'we', 'have', 'no', 'cheese']
+        self.zs1._log(messages)
+        another = 'yet another message'
+        self.zs1._log(another)
+        log.check()
+
+    @log_capture()
+    def test_log_exeception(self,log):
+        self.zs1.log = True
         try:
-            self.zs1.logfile = fpath
-            messages = ['yes', 'we', 'have', 'no', 'cheese']
-            now = self.zs1._get_time()
-            #import pdb; pdb.set_trace()
-            self.zs1._log(messages)
-            logfile = open(fpath, 'r')
-            data = logfile.readlines()
-            logfile.close()
-            self.assertEqual(len(data), 1)
-            # XXX slow system can break the next test!!!
-            self.failUnless(data[0].startswith(now))
-            for expected_text in messages:
-                self.failUnless(data[0].count(expected_text))
-            # Make sure that further logging appends.
-            another = 'yet another message'
-            self.zs1._log(another)
-            logfile = open(fpath, 'r')
-            data = logfile.readlines()
-            logfile.close()
-            self.assertEqual(len(data), 2)
-            self.failUnless(data[1].startswith(now))
-            self.failUnless(data[1].count(another))
-        finally:
-            try:
-                os.unlink(fpath)
-            except:
-                pass
+            raise TypeError('silly boy')
+        except:
+            pass
+        self.zs1._logException(['something', 'went', 'wrong'])
+        log.check(
+            ('event.ZSyncer', 'ERROR', "['something', 'went', 'wrong']"),
+            )
+        compare(C(TypeError('silly boy')),log.records[-1].exc_info[1])
+        
+    @log_capture()
+    def test_no_log_exeception(self,log):
+        try:
+            raise TypeError('silly boy')
+        except:
+            pass
+        self.zs1._logException(['something', 'went', 'wrong'])
+        log.check()
 
     def test_do_one_msg(self):
         request = FakeResponse()  # Just a place to stuff the response.

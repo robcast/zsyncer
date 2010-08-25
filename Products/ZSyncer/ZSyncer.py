@@ -4,14 +4,6 @@ ZSyncer
 A Zope product that provides a synchronization service
 to copy (and compare) objects from one Zope server to another.
 
-Home page:    http://zsyncer.sourceforge.net
-Release version: see version.txt
-Instructions:    see README.txt
-Copyright:       see LICENSE.txt
-Authors:         see credits.txt
-Changelog:       see changes.txt
-Future Plans:    see TODO.txt
-
 """
 # $Id: ZSyncer.py,v 1.104 2009/10/23 16:32:11 slinkp Exp $
 
@@ -75,8 +67,6 @@ from Config import EXTRA
 from Config import MISSING
 from Config import OOD
 
-# BBB: Using logging in Zope 2.7 requires the name to begin with 'event'.
-# We can change that to just 'ZSyncer' if/when we no longer support 2.7.
 logger = logging.getLogger('event.ZSyncer')
 
 ZSYNC_PERMISSION = "ZSyncer: Use ZSyncer"
@@ -122,7 +112,6 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         {'id':'title', 'type':'string', 'mode':'w'},
         {'id':'dest_servers', 'type':'lines', 'mode':'w'},
         {'id':'log', 'type':'boolean', 'mode':'w'},
-        {'id':'logfile', 'type':'string', 'mode':'w'},
         {'id':'approval', 'type':'boolean', 'mode':'w'},
         {'id':'syncable', 'type':'multiple selection', 'mode':'w',
          'select_variable': 'syncable'},
@@ -188,7 +177,6 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         self.log = 0
         self.approval = 0
         self.syncable = Config.syncable[:]
-        self.logfile = os.path.join('log', 'ZSyncer.log')
         self.connection_type = 'ConnectionMgr' # 'ZPublisher.Client'
         self.use_relative_paths = 1
         self.strip_talkback_comments = 0
@@ -1149,30 +1137,14 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
 
     def _log(self, msgs):
         # Log messages for ZSyncer.
-        # This will become more configurable.
-        m_time = self._get_time()
-        try:
-            aq_base(self)._v_logfile
-        except AttributeError:
-            if self.logfile.startswith('/'):
-                msg = 'You have set an absolute path to the log file for your'
-                msg += ' ZSyncer instance at '
-                msg += '/'.join(self.getPhysicalPath())
-                msg += '. You should probably make it relative to your'
-                msg += ' instance home.'
-                logger.error(msg)
-            path = os.path.join(INSTANCE_HOME, self.logfile)
-            self._v_logfile = open(path, 'a')
-        self._v_logfile.write('%s\t%s\n' % (m_time, str(msgs)))
-        self._v_logfile.flush()
+        if self.log:
+            logger.info(str(msgs))
 
     def _logException(self, msgs):
         # Log the latest traceback.
         if not self.log:
             return
-        exc = '\n'.join(traceback.format_exception(*sys.exc_info()))
-        msgs = '%s %s' % (msgs, exc)
-        self._log(msgs)
+        logger.exception(str(msgs))
 
     ######################################################################
     # Control of the remote server
