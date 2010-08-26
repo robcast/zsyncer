@@ -1,7 +1,7 @@
 Changes
 =======
 
-Version 1.0.0 (xx yyy zzzz)
+Version 1.0.0 (26 Aug 2010)
 ---------------------------
 
 - Make into a normal python package.
@@ -14,6 +14,9 @@ Version 1.0.0 (xx yyy zzzz)
 - Converted documentation to Sphinx docs.
 
 - Send all logging to the python logging framework.
+
+- Fixed bug whereby pulling from a remote source might report a
+  success even when replacing the object locally had failed.
 
 Version 0.7.2
 -------------

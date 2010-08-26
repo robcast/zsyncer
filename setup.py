@@ -9,7 +9,7 @@ base_dir = os.path.dirname(__file__)
 
 setup(
     name='Products.ZSyncer',
-    version='1.0dev',
+    version='1.0.0',
     author='Paul M. Winkler, Chris Withers',
     author_email='chris@simplistix.co.uk',
     description="ZSyncer is a Zope 2 product that allows you to synchronize and compare objects from one zope (source) to another (destination)",

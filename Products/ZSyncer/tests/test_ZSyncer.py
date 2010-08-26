@@ -16,7 +16,7 @@ import time
 import types
 
 from testfixtures import compare, Comparison as C
-from testfixtures import log_capture
+from testfixtures import log_capture, replace
 
 # ZopeTestCase imports and setup.
 from Testing import ZopeTestCase
@@ -1192,6 +1192,13 @@ class TestRemoteMethods(RemoteSetUp, ZSyncerSetUp,
         self.assertEqual(msgs[0].status, 200)
         self.failUnless(self.file_extra.getId() in self.folder.objectIds())
 
+    @replace('Products.ZSyncer.ZSyncer.ZSyncer.manage_replaceObject',lambda *args:404)
+    def test_manage_pullFromRemote_replace_problem(self,log):
+        # errors returned from manage_replaceObject were ignored :-(
+        folder, path = '', self.file_extra.getId()
+        msgs = self.zs1.manage_pullFromRemote(path)
+        self.assertEqual(len(msgs), 1)
+        self.assertEqual(msgs[0].status, 404)
 
     def test_manage_touch(self):
         missing_path = self.zs1._getRelativePhysicalPath(self.file_missing)

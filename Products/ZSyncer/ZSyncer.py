@@ -371,8 +371,12 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 msgs.append(msg)
                 self._do_one_msg(msg, REQUEST)
             else:
-                self.manage_replaceObject(obj_path, data)
-                msg = StatusMsg('%s downloaded' % obj_path, 200)
+                status = self.manage_replaceObject(obj_path, data)
+                if status==200:
+                    template = '%s downloaded'
+                else:
+                    template = 'Error downloading %s'
+                msg = StatusMsg(template % obj_path, status)
                 msgs.append(msg)
                 self._do_one_msg(msg, REQUEST)
         self._msg_footer(REQUEST)
