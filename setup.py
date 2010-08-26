@@ -12,7 +12,9 @@ setup(
     version='1.0.0',
     author='Paul M. Winkler, Chris Withers',
     author_email='chris@simplistix.co.uk',
-    description="ZSyncer is a Zope 2 product that allows you to synchronize and compare objects from one zope (source) to another (destination)",
+    description=("ZSyncer is a project that allows live zope objects "
+                 "to be synchronized from one Zope to another without "
+                 "doing the tedious export / transfer / import dance"),
     long_description=open(os.path.join(base_dir,'docs','description.txt')).read(),
     url='http://pypi.python.org/pypi/Products.ZSyncer',
     classifiers=[

@@ -2,12 +2,13 @@
 ZSyncer
 =======
 
-ZSyncer is a project that allows live zope objects to be synchronized
-from one Zope to another without doing the tedious export / transfer /
-import dance. It is very easy to use. 
-
 ZSyncer also allows you to see at a glance which objects are
 out-of-sync.
 
 ZSyncer also allows you to view a diff against the destination object,
 for many types of objects. 
+
+The Subversion repository from which these releases are made can be
+found here:
+
+https://secure.simplistix.co.uk/svn/ZSyncer/
