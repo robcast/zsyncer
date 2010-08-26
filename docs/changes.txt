@@ -1,6 +1,11 @@
 Changes
 =======
 
+Version 1.0.1 (26 Aug 2010)
+---------------------------
+
+- Restore required files that were missing from the package.
+
 Version 1.0.0 (26 Aug 2010)
 ---------------------------
 
