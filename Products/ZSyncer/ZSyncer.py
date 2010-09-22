@@ -178,7 +178,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         self.approval = 0
         self.syncable = Config.syncable[:]
         self.connection_type = 'ConnectionMgr' # 'ZPublisher.Client'
-        self.use_relative_paths = 1
+        self.use_relative_paths = 0
         self.strip_talkback_comments = 0
         self.filterObjects = 0
         self.filterOutObjects = 0

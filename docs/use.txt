@@ -36,8 +36,12 @@ relative paths.  This means that a syncer at host1:8080/folder1/syncer1
 can sync to host2:8080/folder2/syncer2, and objects from folder1 on
 host1 will be synced to folder2 on host2.  This is a new feature,
 please let me know if there are any problems.
-Note that the flag must currently be set on both source and destination
-servers in order to work correctly.
+
+.. warning:: 
+
+  This flag must be set identically on both servers or you will have
+  problems. The current maintainer sees this functionality as
+  experimental and recommends you leave the box unchecked.
 
 Changes in usage
 ----------------
