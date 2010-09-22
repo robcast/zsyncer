@@ -103,6 +103,7 @@ class ZSyncerSetUp:
         # Add a zsyncer.
         manage_addZSyncer(self.folder, 'zs1')
         self.zs1 = self.folder.zs1
+        self.zs1.use_relative_paths = 1
         id = 'some_file'
         text = 'This is a test file. It has some text in it.'
         title = 'A file for testing'
@@ -795,6 +796,7 @@ class RemoteSetUp:
         # Now add a syncer in that folder...
         manage_addZSyncer(self.folder2, 'zs2')
         self.zs2 = self.folder2.zs2
+        self.zs2.use_relative_paths = 1        
         # Now use that syncer as the destination from our first syncer.
         self.destination = self.zs2.absolute_url().replace(
             'http://', 'http://%s:%s@' % (user_name, user_password))
