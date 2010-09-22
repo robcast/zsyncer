@@ -9,7 +9,7 @@ base_dir = os.path.dirname(__file__)
 
 setup(
     name='Products.ZSyncer',
-    version='1.0.1',
+    version='1.0.2',
     author='Paul M. Winkler, Chris Withers',
     author_email='chris@simplistix.co.uk',
     description=("ZSyncer is a project that allows live zope objects "

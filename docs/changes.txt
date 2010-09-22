@@ -1,6 +1,15 @@
 Changes
 =======
 
+Version 1.0.2 (22 Sep 2010)
+---------------------------
+
+- Add warning about "use relative paths" mode
+
+- Change default back to not using relative paths
+
+- Fix icons for remote objects
+
 Version 1.0.1 (26 Aug 2010)
 ---------------------------
 
