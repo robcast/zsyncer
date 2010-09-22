@@ -195,7 +195,37 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
         self.assertEqual(d['last_modified_time'].ISO(),
                          obj.bobobase_modification_time().ISO())
         self.assertEqual(d['dc_modtime'], '')
-        self.assertEqual(d['icon'], '/' + obj.icon)
+        self.assertEqual(d['icon'], 'misc_/OFSP/File_icon.gif')
+        self.assertEqual(d['path'], obj.getPhysicalPath()[-1:])
+        self.assertEqual(d['meta_type'], 'File')
+        self.assertEqual(d['is_folder'], 0)
+
+    def test_getInfoForObject_starts_with_slash(self):
+        obj = self.file1
+        obj.icon = '/some/thing'
+        d = self.zs1._getInfoForObject(obj)
+        self.assertEqual(d['id'], self.file1_id)
+        # Note, comparing a DateTime to a supposedly-identical DateTime
+        # apparently occasionally fails due to some precision issue.
+        self.assertEqual(d['last_modified_time'].ISO(),
+                         obj.bobobase_modification_time().ISO())
+        self.assertEqual(d['dc_modtime'], '')
+        self.assertEqual(d['icon'], 'some/thing')
+        self.assertEqual(d['path'], obj.getPhysicalPath()[-1:])
+        self.assertEqual(d['meta_type'], 'File')
+        self.assertEqual(d['is_folder'], 0)
+
+    def test_getInfoForObject_double_slashes(self):
+        obj = self.file1
+        obj.icon = '//some//thing'
+        d = self.zs1._getInfoForObject(obj)
+        self.assertEqual(d['id'], self.file1_id)
+        # Note, comparing a DateTime to a supposedly-identical DateTime
+        # apparently occasionally fails due to some precision issue.
+        self.assertEqual(d['last_modified_time'].ISO(),
+                         obj.bobobase_modification_time().ISO())
+        self.assertEqual(d['dc_modtime'], '')
+        self.assertEqual(d['icon'], 'some/thing')
         self.assertEqual(d['path'], obj.getPhysicalPath()[-1:])
         self.assertEqual(d['meta_type'], 'File')
         self.assertEqual(d['is_folder'], 0)
@@ -438,7 +468,7 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
         for key, value in sub_items:
             self.failUnless(key in self.folder.objectIds())
             self.assertEqual(value['id'], key)
-            self.assertEqual(value['icon'], '/' + self.folder[key].icon)
+            self.assertEqual(value['icon'], self.folder[key].icon)
         # Now try the 'do_base' argument.
         nobase = zs1.manage_listObjects(path, do_base=0)
         self.assertEqual({}, nobase[0])

@@ -140,7 +140,7 @@ function toggle_checks() {
 		title=" &dtml-status; " />
         </td>
         <td class="list-item"  align="center">
-            <dtml-if icon><img src="&dtml-icon;" alt="&dtml-meta_type;"></dtml-if>
+            <dtml-if icon><img src="<dtml-var "getPhysicalRoot().absolute_url()">/&dtml-icon;" alt="&dtml-meta_type;"></dtml-if>
         </td>
 
 	<!-- ID or PATH -->

@@ -477,7 +477,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
     def manage_replaceObject(self, obj_path, data=None):
         """
         If an object already exists at *obj_path*,  delete it.
-        If *data* is not None, treat is as a picked new object to
+        If *data* is not None, treat is as a pickled new object to
         add at that path.
         """
         try:
@@ -721,11 +721,10 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         if not isinstance(icon, types.StringType):
             # CMF fix, where apparently obj.icon may be callable.
             icon = icon()
-        if not icon.startswith('/'):
-            # Avoid stupid relative paths, don't want to download
-            # the icons again in every folder.
-            icon = '%s/%s' % (obj.getPhysicalRoot().absolute_url_path(), icon)
-        d['icon'] = icon.replace('//', '/')
+        icon = icon.replace('//', '/')
+        if icon.startswith('/'):
+            icon = icon[1:]
+        d['icon'] = icon
         d['is_folder'] = getattr(obj, 'isPrincipiaFolderish', 0)
         # Try to get DublinCore mod time, if available.
         base_obj = aq_base(obj)
