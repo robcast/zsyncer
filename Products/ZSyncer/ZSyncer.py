@@ -316,6 +316,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             try:
                 data = self.manage_getExportData(object_path)
             except ZSyncerObjNotFound:
+                logger.debug('404 in manage_pushToRemote',exc_info=True)
                 msg =  StatusMsg('cannot push %s' % object_path,
                                  404)
                 msgs.append(msg)
@@ -456,6 +457,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         try:
             obj = self._getObject(obj_path)
         except ZSyncerObjNotFound:
+            logger.debug('404 in manage_getSource',exc_info=True)
             return 404
 
         c = getSecurityManager().checkPermission
@@ -489,6 +491,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             if data:
                 pass
             else:
+                logger.debug('404 in manage_replaceObject (1)',exc_info=True)
                 return 404
         if not obj_path:
             raise ValueError, "Need a non-empty object path"
@@ -512,6 +515,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                 for segment in obj_path[:-1]:
                     obj_parent = obj_parent[segment]
             except KeyError:
+                logger.debug('404 in manage_replaceObject (2), obj_path:%r',obj_path,exc_info=True)
                 return 404
         # Let's check the user is allowed to do this.
         checkPermission = getSecurityManager().checkPermission
@@ -549,6 +553,7 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             obj_parent.manage_delObjects([obj_path[-1],])
         else:
             if data is None:  # Ok if we are deleting.
+                logger.debug('404 in manage_replaceObject (3)',exc_info=True)
                 return 404
         # Add the new object, if any.
         if data is not None:
