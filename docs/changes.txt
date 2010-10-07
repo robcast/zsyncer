@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 1.0.3 (07 Oct 2010)
+---------------------------
+
+- Fixed bug when attempting to replace objects locally using an
+  absolute path
+
 Version 1.0.2 (22 Sep 2010)
 ---------------------------
 
