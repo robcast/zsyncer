@@ -482,41 +482,22 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
         If *data* is not None, treat is as a pickled new object to
         add at that path.
         """
-        try:
-            obj_path = self._getRelativePhysicalPath(obj_path)
-        except (ValueError, NotFound, ZSyncerObjNotFound):
-            # The object was not found or is not within the root path.
-            # That's a problem when we're deleting.  But if *data* is
-            # provided, this just means we're adding a new object.
-            if data:
-                pass
-            else:
-                logger.debug('404 in manage_replaceObject (1)',exc_info=True)
-                return 404
-        if not obj_path:
-            raise ValueError, "Need a non-empty object path"
-        if type(obj_path) is types.StringType:
-            obj_path_printable = obj_path
+        if isinstance(obj_path,basestring):
             obj_path = obj_path.split('/')
-        else:
-            obj_path_printable = '/'.join(obj_path)
-        root = self._getSyncerRoot()
-        if len(obj_path) == 1:
-            # The object goes in our root.
-            obj_parent = root
-        else:
-            # We already know length is non-zero, so there must be
-            # some subfolders on the path. They must correspond to
-            # subfolders of root and not be acquired from above
-            # (or from siblings). So, we walk the path by hand,
-            # instead of using (un)restrictedTraverse.
-            obj_parent = root
-            try:
-                for segment in obj_path[:-1]:
-                    obj_parent = obj_parent[segment]
-            except KeyError:
-                logger.debug('404 in manage_replaceObject (2), obj_path:%r',obj_path,exc_info=True)
-                return 404
+        obj_path_printable = '/'.join(obj_path)
+        obj_id = obj_path[-1]
+        try:
+            parent_path = self._getRelativePhysicalPath(obj_path[:-1])
+        except (ValueError, NotFound, ZSyncerObjNotFound):
+            # couldn't find the parent, oh dear...
+            logger.debug("Couldn't find parent object at %r",
+                         obj_path_printable,
+                         exc_info=True)
+            return 404
+        # get the parent object, avoiding acquisition
+        obj_parent = self._getSyncerRoot().aq_explicit.unrestrictedTraverse(
+            parent_path
+            )
         # Let's check the user is allowed to do this.
         checkPermission = getSecurityManager().checkPermission
         allowed = 1
@@ -541,23 +522,25 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             and not isBTreeFolder
         # If there is one there already, delete it.
         # Hooray for transactions :)
-        if ((obj_path[-1] in obj_parent.objectIds())
+        if ((obj_id in obj_parent.objectIds())
                 # ZClass propertysheets.methods ids might have a trailing space
                 or [id for id in obj_parent.objectIds() \
-                        if id.strip() == obj_path[-1]]):
+                        if id.strip() == obj_id]):
             # Fix ordering.
             if has_order_support:
-                position = obj_parent.getObjectPosition(obj_path[-1])
+                position = obj_parent.getObjectPosition(obj_id)
             elif has_ordered_object_manager:
-                position = obj_parent.get_object_position(obj_path[-1])
-            obj_parent.manage_delObjects([obj_path[-1],])
+                position = obj_parent.get_object_position(obj_id)
+            obj_parent.manage_delObjects([obj_id,])
         else:
             if data is None:  # Ok if we are deleting.
-                logger.debug('404 in manage_replaceObject (3)',exc_info=True)
+                logger.debug('Object already gone when attempting to delete %r',
+                             obj_path_printable,
+                             exc_info=True)
                 return 404
         # Add the new object, if any.
         if data is not None:
-            logger.debug('trying to import %s **', obj_path_printable)
+            logger.debug('trying to import %r', obj_path_printable)
             threshold = Config.upload_threshold_kbytes * 1024
             # Write the data either to a temporary file, or hold it in RAM.
             if len(data) < threshold:
@@ -568,33 +551,17 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             del(data)
             _file.seek(0)
             # Now import it.
-            try:
-                new_obj = obj_parent._p_jar.importFile(_file)
-            except:
-                # We'll re-raise it.
-                msg = '_p_Jar.importFile(_file) failed '
-                msg += '... receiving %s' % obj_path_printable
-                logger.error(msg)
-                raise
+            new_obj = obj_parent._p_jar.importFile(_file)
             _file.close()
             if new_obj == None:
-                msg = ('importing %s failed, problem with parents?' %
-                       obj_path_printable)
-                logger.error(msg)
+                logger.error('importing %r failed, problem with parents?',
+                             obj_path_printable)
                 raise AttributeError, msg
             object_id = new_obj.getId()
-            try:
-                obj_parent._setObject(object_id, new_obj)
-            except:
-                # we'll re-raise it.
-                msg = 'obj_parent._setObject failed '
-                msg += '...receiving %s' % obj_path_printable
-                logger.error(msg)
-                raise
+            obj_parent._setObject(object_id, new_obj)
 
             # Fix OrderedFolder position.
             if(position is not None):
-                try:
                     methodname = 'moveObjectToPosition'
                     if has_order_support:
                         obj_parent.moveObjectToPosition(object_id, position)
@@ -603,12 +570,6 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                         newposition = obj_parent.get_object_position(object_id)
                         obj_parent.move_objects_by_positions(object_id,
                                                          position-newposition)
-                except:
-                    # We'll re-raise it.
-                    msg = 'obj_parent.%s failed ' % methodname
-                    msg += '...receiving %s' % obj_path_printable
-                    logger.error(msg)
-                    raise
             # SF bug 988027:
             # Clear DAV locks, if any.
             lockmanager = self.Control_Panel.DavLocks

@@ -404,6 +404,15 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
                           zs1._getObject, 'this path is bogus')
 
 
+    def _get_file1_data(self):
+        sio = cStringIO.StringIO()
+        try:
+            sp = _make_savepoint()
+            self.file1._p_jar.exportFile(self.file1._p_oid, sio)
+        finally:
+            sp.rollback()
+        return sio.getvalue()
+        
     def test_manage_replaceObject(self):
         path = (self.file1_id,)
         # Make sure the object is actually there...
@@ -412,15 +421,7 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
         status = self.zs1.manage_replaceObject(path + ('nowhere',))
         self.assertEqual(status, 404)
         self.failUnless(self.file1 in self.folder.objectValues())
-        # We're going to delete file1, so get an export of it first...
-        # use the subtransaction hack to get a _p_oid and _p_jar.
-        exp_data = cStringIO.StringIO()
-        try:
-            sp = _make_savepoint()
-            self.file1._p_jar.exportFile(self.file1._p_oid, exp_data)
-        finally:
-            sp.rollback()
-        exp_data = exp_data.getvalue()
+        exp_data = self._get_file1_data()
         # Calling w/ the correct path and None should remove the file.
         status = self.zs1.manage_replaceObject(path, None)
         self.failIf(self.file1 in self.folder.objectValues())
@@ -454,6 +455,19 @@ class TestZSyncerBasics(ZSyncerSetUp, ZopeTestCase.ZopeTestCase):
         # XXX try with something that has a DAV lock and ensure that
         # it's cleared.
 
+    def test_manage_replaceObject_absolute_paths(self):
+        self.failUnless(self.file1 in self.folder.objectValues())
+        path = self.file1.getPhysicalPath()
+        exp_data = self._get_file1_data()
+        # Calling w/ the correct path and None should remove the file.
+        status = self.zs1.manage_replaceObject(path, None)
+        self.failIf(self.file1 in self.folder.objectValues())
+        self.assertEqual(status, 200)
+        # Now try again with some pickled data.
+        status = self.zs1.manage_replaceObject(path, exp_data)
+        self.failUnless(self.file1_id in self.folder.objectIds(),
+                        '%r not in %r' % (self.file1_id,self.folder.objectIds()))
+        self.assertEqual(status, 200)
 
     def test_manage_listObjects(self):
         zs1 = self.zs1
