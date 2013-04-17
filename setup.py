@@ -29,6 +29,7 @@ setup(
         ),
     extras_require=dict(
         test=[
+            'httplib2',
             'testfixtures',
             ],
         )
