@@ -85,7 +85,7 @@ def manage_addZSyncer(self, id='', title='', REQUEST=None):
 
 
 class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
-              AccessControl.Role.RoleManager,
+              AccessControl.rolemanager.RoleManager,
               OFS.PropertyManager.PropertyManager):
 
     """A service provider that allows you to 'push' objects

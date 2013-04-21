@@ -1,5 +1,5 @@
 #
-#    Copyright (c) 2004, Corporation of Balclutha.
+#    Copyright (c) 2004-2013, Corporation of Balclutha.
 #
 #    Please report any bugs or errors in this program to our bugtracker
 #    at http://www.last-bastion.net/HelpDesk
@@ -29,32 +29,12 @@ from unittest import TestSuite, makeSuite
 class TestConnectionMgr(ZopeTestCase.ZopeTestCase):
     '''Tries various things allowed by the ZopeTestCase API.'''
 
-    def testDomainURI(self):
-        conn = ConnectionMgr(('https://monitor.last-bastion.net','',''),
-                             'manage_listObjects')
-        self.assertEqual(conn._v_conn.host, 'monitor.last-bastion.net')
-        self.assertEqual(conn._v_conn.port, 443)
-
-    def testIPURI(self):
-        conn = ConnectionMgr(('http://127.0.0.1:666','',''),
-                             'manage_listObjects')
-        self.assertEqual(conn._v_conn.host, '127.0.0.1')
-        self.assertEqual(conn._v_conn.port, 666)
 
     def testNotJustDomain(self):
         conn = ConnectionMgr(('http://127.0.0.1/somewhere/syncer','',''),
                              'manage_listObjects')
         self.failUnless(1)
 
-    def testBadProtocol(self):
-        self.assertRaises(AssertionError, ConnectionMgr,
-                          ('ldap://localhost','',''), 'manage_listObjects')
-
-    def testAuthHeader(self):
-        conn = ConnectionMgr(('http://127.0.0.1/ZSyncer', 'bill', 'secret'),
-                             'manage_listObjects')
-        self.assertEqual(conn.headers['Authorization'],
-                         'Basic YmlsbDpzZWNyZXQ=\n')
 
 
 def test_suite():

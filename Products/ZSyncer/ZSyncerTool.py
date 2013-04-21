@@ -11,7 +11,8 @@ import copy
 # Zope imports.
 from AccessControl import ClassSecurityInfo, Permissions
 from Acquisition import aq_base
-from Globals import InitializeClass, DTMLFile
+from AccessControl.class_init import InitializeClass
+from App.special_dtml import DTMLFile
 from OFS.SimpleItem import SimpleItem
 
 # Third-party imports.
