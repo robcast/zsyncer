@@ -18,6 +18,7 @@ import types
 import urllib
 import urlparse
 from cStringIO import StringIO
+import zlib
 
 # Zope imports
 import OFS.SimpleItem
@@ -708,6 +709,32 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
             d['size'] = int(obj.get_size()) / 1024
         except AttributeError:
             d['size'] = ''
+        # Get CRC32 of object source.    
+        # Try to handle various kinds of objects;
+        # use whatever's in the config for this meta_type.
+        base_obj = aq_base(obj)
+        mt = base_obj.meta_type
+        attrname = Config.diff_methods.get(mt, Config.diff_methods['DEFAULT'])
+        src_attr = getattr(base_obj, attrname, None)
+        if src_attr is not None:
+            try:
+                if callable(src_attr):
+                    if hasattr(src_attr, 'data'):
+                        # seems to be OFS.Image.Pdata
+                        src = src_attr.data
+                        while src_attr.next is not None:
+                            src += src_attr.next.data
+                            src_attr = src_attr.next
+                    else:
+                        src = src_attr()
+                else:
+                    src = src_attr
+                if len(src) > 0:
+                    if isinstance(src, unicode):
+                        src = src.encode('utf-8')
+                    d['crc32'] = zlib.crc32(src)
+            except Exception, e:
+                logging.error("Unable to checksum %s: %s"%(repr(obj), e))
         return d
 
     security.declarePrivate('is_diffable')
@@ -901,8 +928,12 @@ class ZSyncer(OFS.SimpleItem.Item, Persistent, Acquisition.Implicit,
                     # differently, which would require adding another status.
                     item['status'] = OOD
             # Last resort, use bobobase_modification_time.
-            elif s_bobotime.timeTime() - d_bobotime.timeTime() < \
+            elif abs(s_bobotime.timeTime() - d_bobotime.timeTime()) < \
                      Config.fudge_secs:
+                item['status'] = OK
+            # compare crc32
+            elif s_item.get('crc32', 0) != 0 and d_item.get('crc32', 0) != 0 and \
+                s_item.get('crc32') == d_item.get('crc32'):
                 item['status'] = OK
             else:
                 item['status'] = OOD
